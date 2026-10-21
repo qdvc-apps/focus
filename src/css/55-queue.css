@@ -1,0 +1,205 @@
+/* ==========================================================================
+   55-queue.css — the queue sidebar: add form, up-next tray, later list,
+   task cards and the drop marker.
+   ========================================================================== */
+
+.queue-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.add-form {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 #fff;
+}
+
+.field-row { display: flex; gap: 6px; }
+.field-row .field { flex: 1; min-width: 0; }
+
+.hint {
+  margin-top: 7px;
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+}
+
+.queue-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 14px;
+}
+
+/* The up-next slot is a recessed tray the next card sits in. */
+.tray {
+  min-height: 78px;
+  padding: 8px;
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 10px;
+  box-shadow: var(--sink);
+  transition: background-color .15s, box-shadow .15s;
+}
+
+.tray.drop-active {
+  background: linear-gradient(#cfdbeb, #dfe7f1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .14), inset 0 0 0 2px #5b93dc, 0 0 0 3px rgba(58, 123, 213, .18);
+}
+
+.tray-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 0 12px;
+  font-size: var(--fs-sm);
+  text-align: center;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+
+.later-list {
+  min-height: 70px;
+  margin: 0;
+  padding: 4px 0 40px;
+  list-style: none;
+  border-radius: 8px;
+}
+
+.later-item { margin-bottom: 7px; }
+
+.list-empty {
+  padding: 8px 4px;
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+}
+
+body.dragging-task .later-list .list-empty { visibility: hidden; }
+
+/* The marker takes no space; it is drawn into the gap between cards. */
+.drop-marker {
+  position: relative;
+  height: 0;
+  list-style: none;
+}
+
+.drop-marker::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 2px;
+  top: -5px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(#6aa8ef, #2f6fca);
+  box-shadow: 0 1px 2px rgba(30, 80, 160, .45);
+}
+
+.drop-marker::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #2f6fca;
+}
+
+/* ------------------------------------------------------------- task card */
+
+.task-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 7px 9px 6px;
+  background: linear-gradient(#ffffff, #f4f2ee);
+  border: 1px solid #bcb7ad;
+  border-radius: 8px;
+  box-shadow: var(--raise-1);
+  cursor: grab;
+  transition: box-shadow .12s, opacity .12s;
+}
+
+.task-card:hover {
+  border-color: #a8a297;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(40, 34, 24, .16);
+}
+
+.task-card:active { cursor: grabbing; }
+
+.task-card.is-next {
+  padding: 11px 8px 11px 7px;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 4px rgba(40, 34, 24, .18);
+}
+
+.task-card.is-dragging { opacity: .4; }
+
+/* A knurled grip down the side says "you can pick this up". */
+.grip {
+  flex: none;
+  align-self: stretch;
+  width: 8px;
+  margin: 1px 1px 1px 2px;
+  background-image: radial-gradient(circle, #a39d92 0.9px, transparent 1.3px);
+  background-size: 4px 4px;
+  opacity: .85;
+}
+
+.task-body { flex: 1; min-width: 0; }
+
+.task-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.task-card.is-next .task-title { font-size: 14.5px; }
+
+.task-note {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-meta {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+}
+
+.meta-dot {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .7;
+}
+
+.task-tools {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 1px;
+  padding: 1px 1px 1px 18px;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(to right, rgba(253, 252, 251, 0), #fdfcfb 16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+}
+
+.task-card:hover .task-tools,
+.task-card:focus-within .task-tools { opacity: 1; pointer-events: auto; }
+
+body.dragging-task .task-tools { opacity: 0 !important; }

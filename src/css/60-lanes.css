@@ -1,0 +1,157 @@
+/* ==========================================================================
+   60-lanes.css — the background lane (with its barber-pole progress bars)
+   and the done log.
+   ========================================================================== */
+
+/* ------------------------------------------------------------ background */
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.bg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  background: linear-gradient(#ffffff, #f3f1ec);
+  border: 1px solid #bab5aa;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(40, 34, 24, .13);
+}
+
+.bg-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.bg-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Indeterminate progress: something is working, nobody knows how long. */
+.pole-track {
+  height: 11px;
+  overflow: hidden;
+  background: linear-gradient(#cdc9c1, #e3e0d9);
+  border: 1px solid #a49e92;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25), 0 1px 0 #fff;
+}
+
+.pole {
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .6), rgba(255, 255, 255, .05) 55%, rgba(0, 0, 0, .1)),
+    repeating-linear-gradient(-45deg, #5b99e6 0 7px, #94c2f5 7px 14px);
+  background-size: 100% 100%, 19.8px 100%;
+  border-radius: 5px;
+  animation: pole 1.1s linear infinite;
+}
+
+@keyframes pole {
+  to { background-position: 0 0, 19.8px 0; }
+}
+
+.bg-times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bg-time-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bg-time-main .icon { color: var(--ink-dim); }
+
+.bg-time-sub {
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+
+.bg-actions { display: flex; gap: 6px; }
+
+/* ------------------------------------------------------------------ done */
+
+.done-table { padding: 2px 0 8px; }
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px 5px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 #fff;
+  border-bottom: 1px solid #e0dcd4;
+}
+
+.day-count { font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.done-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 96px 62px minmax(120px, 170px) 58px;
+  align-items: center;
+  gap: 12px;
+  min-height: 33px;
+  padding: 4px 12px 4px 16px;
+}
+
+.done-row.is-alt { background: rgba(80, 70, 50, .035); }
+.done-row:hover { background: rgba(58, 123, 213, .07); }
+
+.done-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  border-radius: 50%;
+  background: linear-gradient(#7fcf93, #3d9a57);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 0 1px #2c7d43, 0 1px 1px rgba(0, 0, 0, .15);
+}
+
+.done-check .icon { width: 12px; height: 12px; stroke-width: 2.6; }
+
+.done-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.done-when, .done-took, .done-focus {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink-mid);
+}
+
+.done-took { font-weight: 700; color: var(--ink); text-align: right; }
+.done-focus { overflow: hidden; text-overflow: ellipsis; }
+
+.done-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1px;
+  opacity: 0;
+}
+
+.done-row:hover .done-tools,
+.done-row:focus-within .done-tools { opacity: 1; }

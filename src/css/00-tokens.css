@@ -1,0 +1,72 @@
+/* ==========================================================================
+   00-tokens.css — the single source of truth for colour, type and metrics.
+   The look is deliberately tactile: lit-from-above gradients, inset wells,
+   bevelled controls. Surfaces are warm greys so the blue and green accents
+   read as signals rather than decoration.
+   ========================================================================== */
+
+:root {
+  /* type */
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ink */
+  --ink:        #23211d;
+  --ink-mid:    #57524a;
+  --ink-dim:    #7d776d;
+  --ink-faint:  #a39d92;
+
+  /* the desk behind everything */
+  --desk-top:   #e3e0da;
+  --desk-bot:   #cfcbc3;
+
+  /* raised surfaces */
+  --panel-hi:   #fefefd;
+  --panel-lo:   #f2f0eb;
+  --panel-edge: #b3aea4;
+  --head-hi:    #fbfaf8;
+  --head-lo:    #e7e4de;
+  --line:       #d6d2c9;
+  --line-hi:    #ffffff;
+
+  /* sunken wells */
+  --well-hi:    #d9d5cd;
+  --well-lo:    #e7e4dd;
+
+  /* accents */
+  --blue-hi:    #7db6f3;
+  --blue:       #3a7bd5;
+  --blue-lo:    #2d6cc4;
+  --blue-edge:  #24599f;
+  --go-hi:      #82d396;
+  --go:         #46a560;
+  --go-lo:      #379250;
+  --go-edge:    #29703d;
+  --red:        #b4362a;
+  --red-edge:   #85251c;
+  --amber:      #c98314;
+  --amber-lo:   #9a6208;
+
+  /* the clock and the code view */
+  --glass-hi:   #383e46;
+  --glass-lo:   #1a1d21;
+  --glass-ink:  #f3efe6;
+  --glass-dim:  #9aa3ad;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --toolbar-h: 54px;
+  --statusbar-h: 26px;
+  --side-w: 390px;
+
+  --ring: 0 0 0 3px rgba(58, 123, 213, .38);
+  --raise-1: inset 0 1px 0 #fff, 0 1px 2px rgba(40, 34, 24, .12);
+  --raise-2: inset 0 1px 0 #fff, 0 1px 1px rgba(40, 34, 24, .08), 0 3px 10px rgba(40, 34, 24, .12);
+  --sink: inset 0 2px 4px rgba(0, 0, 0, .14), inset 0 0 0 1px rgba(0, 0, 0, .07), 0 1px 0 #fff;
+}

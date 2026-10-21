@@ -1,0 +1,76 @@
+/* ==========================================================================
+   10-base.css — reset, the desk texture, shared typography.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  min-width: 1024px;
+  overflow: hidden;
+  font: var(--fs-md)/1.45 var(--font);
+  color: var(--ink);
+  background-color: var(--desk-bot);
+  /* A faint grain over a top-lit gradient: enough to read as a surface,
+     not enough to notice. */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0)),
+    linear-gradient(var(--desk-top), var(--desk-bot));
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, textarea, select { font: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+b, strong { font-weight: 700; }
+
+code {
+  font: .92em var(--mono);
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .06);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  font: 600 10.5px/16px var(--font);
+  text-align: center;
+  color: #4a453d;
+  background: linear-gradient(#ffffff, #ebe8e2);
+  border: 1px solid #b3ada1;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 #a39d91;
+}
+
+.dim { color: var(--ink-dim); }
+
+.icon { flex: none; display: block; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-10px) scale(.98); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

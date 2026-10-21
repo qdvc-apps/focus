@@ -1,0 +1,4467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="QDVC Focus — keep track of what you are working on now, what is up next, and what is running in the background.">
+<title>QDVC Focus</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1.5' y='1.5' width='29' height='29' rx='7' fill='%232d3238'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%233a7fd0'/%3E%3Cpath d='M7.6 17.5h16.8' stroke='%23e8f3ff' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='17.5' r='2.2' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ---------- src/css/00-tokens.css ---------- */
+/* ==========================================================================
+   00-tokens.css — the single source of truth for colour, type and metrics.
+   The look is deliberately tactile: lit-from-above gradients, inset wells,
+   bevelled controls. Surfaces are warm greys so the blue and green accents
+   read as signals rather than decoration.
+   ========================================================================== */
+
+:root {
+  /* type */
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ink */
+  --ink:        #23211d;
+  --ink-mid:    #57524a;
+  --ink-dim:    #7d776d;
+  --ink-faint:  #a39d92;
+
+  /* the desk behind everything */
+  --desk-top:   #e3e0da;
+  --desk-bot:   #cfcbc3;
+
+  /* raised surfaces */
+  --panel-hi:   #fefefd;
+  --panel-lo:   #f2f0eb;
+  --panel-edge: #b3aea4;
+  --head-hi:    #fbfaf8;
+  --head-lo:    #e7e4de;
+  --line:       #d6d2c9;
+  --line-hi:    #ffffff;
+
+  /* sunken wells */
+  --well-hi:    #d9d5cd;
+  --well-lo:    #e7e4dd;
+
+  /* accents */
+  --blue-hi:    #7db6f3;
+  --blue:       #3a7bd5;
+  --blue-lo:    #2d6cc4;
+  --blue-edge:  #24599f;
+  --go-hi:      #82d396;
+  --go:         #46a560;
+  --go-lo:      #379250;
+  --go-edge:    #29703d;
+  --red:        #b4362a;
+  --red-edge:   #85251c;
+  --amber:      #c98314;
+  --amber-lo:   #9a6208;
+
+  /* the clock and the code view */
+  --glass-hi:   #383e46;
+  --glass-lo:   #1a1d21;
+  --glass-ink:  #f3efe6;
+  --glass-dim:  #9aa3ad;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --toolbar-h: 54px;
+  --statusbar-h: 26px;
+  --side-w: 390px;
+
+  --ring: 0 0 0 3px rgba(58, 123, 213, .38);
+  --raise-1: inset 0 1px 0 #fff, 0 1px 2px rgba(40, 34, 24, .12);
+  --raise-2: inset 0 1px 0 #fff, 0 1px 1px rgba(40, 34, 24, .08), 0 3px 10px rgba(40, 34, 24, .12);
+  --sink: inset 0 2px 4px rgba(0, 0, 0, .14), inset 0 0 0 1px rgba(0, 0, 0, .07), 0 1px 0 #fff;
+}
+/* ---------- src/css/10-base.css ---------- */
+/* ==========================================================================
+   10-base.css — reset, the desk texture, shared typography.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  min-width: 1024px;
+  overflow: hidden;
+  font: var(--fs-md)/1.45 var(--font);
+  color: var(--ink);
+  background-color: var(--desk-bot);
+  /* A faint grain over a top-lit gradient: enough to read as a surface,
+     not enough to notice. */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0)),
+    linear-gradient(var(--desk-top), var(--desk-bot));
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, textarea, select { font: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+b, strong { font-weight: 700; }
+
+code {
+  font: .92em var(--mono);
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .06);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  font: 600 10.5px/16px var(--font);
+  text-align: center;
+  color: #4a453d;
+  background: linear-gradient(#ffffff, #ebe8e2);
+  border: 1px solid #b3ada1;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 #a39d91;
+}
+
+.dim { color: var(--ink-dim); }
+
+.icon { flex: none; display: block; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-10px) scale(.98); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+/* ---------- src/css/20-chrome.css ---------- */
+/* ==========================================================================
+   20-chrome.css — window chrome: toolbar, the "since last update" display,
+   the two-column workspace and the status bar.
+   ========================================================================== */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---------------------------------------------------------------- toolbar */
+
+.toolbar {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--toolbar-h);
+  padding: 0 16px;
+  background: linear-gradient(#fbfaf8, #e7e4de 55%, #d8d4cc);
+  border-bottom: 1px solid #958f84;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(255, 255, 255, .45), 0 2px 8px rgba(40, 34, 24, .14);
+}
+
+.toolbar-spacer { flex: 1; }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-mark svg { display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .25)); }
+
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: #34302a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
+  white-space: nowrap;
+}
+
+.toolbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Glossy capsule buttons, lit from above. */
+.tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: #2e2a25;
+  text-shadow: 0 1px 0 #fff;
+  background: linear-gradient(#ffffff, #f2f0ec 50%, #e2dfd8 51%, #ebe8e2);
+  border: 1px solid #9f998e;
+  border-bottom-color: #8b857a;
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 1px 1px rgba(0, 0, 0, .08);
+  cursor: pointer;
+}
+
+.tbtn:hover { background: linear-gradient(#ffffff, #f6f4f1 50%, #e8e5df 51%, #f1eee9); }
+
+.tbtn:active, .tbtn.is-open {
+  background: linear-gradient(#d2cec5, #e0ddd6);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .22);
+}
+
+.tbtn:disabled {
+  color: #a8a297;
+  cursor: default;
+  background: linear-gradient(#fbfaf8, #eeebe6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95);
+}
+
+.tbtn:disabled .icon { opacity: .55; }
+
+.tbtn-round {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  height: 30px;
+}
+
+.segmented { display: flex; }
+.segmented .tbtn { border-radius: 0; }
+.segmented .tbtn + .tbtn { border-left-color: #b3ada2; }
+.segmented .tbtn:first-child { border-radius: 7px 0 0 7px; }
+.segmented .tbtn:last-child { border-radius: 0 7px 7px 0; }
+
+/* The "since last update" display sits in the middle of the toolbar like
+   the status window of a desktop media player: a recessed, backlit panel. */
+.idle-slot { flex: none; }
+
+.idle-chip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 268px;
+  height: 38px;
+  padding: 0 14px 0 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 50%),
+    linear-gradient(#e9eadf, #f7f7f0);
+  border: 1px solid #8a8579;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(255, 255, 255, .35), 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.idle-chip:hover { border-color: #767165; }
+.idle-chip:active { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .3), 0 1px 0 rgba(255, 255, 255, .8); }
+
+.idle-lamp {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d4f8db, #41b45f 55%, #287f40);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 5px rgba(65, 180, 95, .55);
+}
+
+.idle-chip[data-level="warn"] .idle-lamp {
+  background: radial-gradient(circle at 35% 30%, #fff1c9, #e5a12c 55%, #a86c0a);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 6px rgba(229, 161, 44, .7);
+}
+
+.idle-chip[data-level="alert"] .idle-lamp {
+  background: radial-gradient(circle at 35% 30%, #ffd2cc, #db4a3a 55%, #962719);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 8px rgba(219, 74, 58, .8);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.idle-text {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.idle-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #6c6a5f;
+  white-space: nowrap;
+}
+
+.idle-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #2a2924;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+  white-space: nowrap;
+}
+
+.idle-chip[data-level="warn"] .idle-value { color: var(--amber-lo); }
+.idle-chip[data-level="alert"] .idle-value { color: var(--red); }
+
+.idle-chip.is-pulsing { animation: check-in .6s ease-out; }
+
+@keyframes check-in {
+  0% { box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), 0 0 0 0 rgba(65, 180, 95, .55); }
+  100% { box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), 0 0 0 10px rgba(65, 180, 95, 0); }
+}
+
+/* -------------------------------------------------------------- workspace */
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-w);
+  gap: 18px;
+  padding: 18px 18px 0;
+}
+
+.col-main {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  /* Room for the panels' shadows inside the scrolling box. */
+  margin: -4px -8px 0 -6px;
+  padding: 4px 8px 22px 6px;
+}
+
+.col-side {
+  min-height: 0;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1220px) {
+  :root { --side-w: 340px; }
+}
+
+/* ------------------------------------------------------------- status bar */
+
+.statusbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--statusbar-h);
+  padding: 0 16px;
+  font-size: var(--fs-xs);
+  color: var(--ink-mid);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  background: linear-gradient(#e4e1db, #d0ccc4);
+  border-top: 1px solid #a39d92;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65);
+}
+
+.status-item { white-space: nowrap; }
+.status-item.is-error { color: var(--red); font-weight: 700; white-space: normal; }
+.status-spacer { flex: 1; }
+.status-version { color: var(--ink-dim); }
+
+.status-sep {
+  width: 1px;
+  height: 12px;
+  background: #a9a397;
+  box-shadow: 1px 0 0 rgba(255, 255, 255, .7);
+}
+/* ---------- src/css/30-controls.css ---------- */
+/* ==========================================================================
+   30-controls.css — buttons, text fields, small icon tools, links.
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 13px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: #2e2a25;
+  text-shadow: 0 1px 0 #fff;
+  white-space: nowrap;
+  background: linear-gradient(#ffffff, #f2f0ec 50%, #e3e0d9 51%, #ece9e3);
+  border: 1px solid #a19b90;
+  border-bottom-color: #8c867b;
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 1px 2px rgba(0, 0, 0, .1);
+  cursor: pointer;
+}
+
+.btn:hover { background: linear-gradient(#ffffff, #f7f5f2 50%, #e9e6e0 51%, #f2efea); }
+
+.btn:active {
+  background: linear-gradient(#d4d0c8, #e2dfd8);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .22);
+}
+
+.btn:disabled {
+  color: #aaa499;
+  text-shadow: none;
+  cursor: default;
+  background: linear-gradient(#f8f7f4, #eeebe6);
+  box-shadow: none;
+  border-color: #c3bdb2;
+}
+
+.btn:disabled .icon { opacity: .5; }
+
+.btn-lg {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.btn-sm {
+  height: 26px;
+  padding: 0 10px;
+  font-size: var(--fs-sm);
+  gap: 5px;
+}
+
+.btn-icon { width: 40px; padding: 0; }
+
+/* Coloured buttons share one recipe: a two-tone gloss and an engraved
+   label. Only the hues change. */
+.btn-primary, .btn-go, .btn-danger {
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 1px 2px rgba(0, 0, 0, .2);
+}
+
+.btn-primary {
+  background: linear-gradient(var(--blue-hi), #4d8fe2 50%, var(--blue-lo) 51%, #3f81d6);
+  border-color: var(--blue-edge);
+}
+.btn-primary:hover { background: linear-gradient(#8dc0f6, #5b99e6 50%, #3676cc 51%, #4a8ade); }
+.btn-primary:active { background: linear-gradient(#2a65b8, #3a7bd5); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+
+.btn-go {
+  background: linear-gradient(var(--go-hi), #55b26e 50%, var(--go-lo) 51%, #42a05c);
+  border-color: var(--go-edge);
+}
+.btn-go:hover { background: linear-gradient(#93dba5, #61bb79 50%, #3e9a57 51%, #4aa964); }
+.btn-go:active { background: linear-gradient(#2f8146, #46a560); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+
+.btn-danger {
+  background: linear-gradient(#ec8a7f, #d55849 50%, #bd3d2f 51%, #c84a3c);
+  border-color: var(--red-edge);
+}
+.btn-danger:active { background: linear-gradient(#a8352a, #c84a3c); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+
+.btn-primary:disabled, .btn-go:disabled, .btn-danger:disabled {
+  color: rgba(255, 255, 255, .85);
+  text-shadow: none;
+  filter: saturate(.25) brightness(1.15);
+  box-shadow: none;
+}
+
+/* Small borderless tool that gains a bevel on hover. */
+.tool {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  color: #625d54;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tool:hover, .tool.is-open {
+  color: #2b2824;
+  background: linear-gradient(#ffffff, #e9e6e0);
+  border-color: #b5afa4;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .08);
+}
+
+.tool:active {
+  background: linear-gradient(#d9d5cd, #e8e5df);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .18);
+}
+
+.link-btn {
+  align-self: flex-start;
+  padding: 0;
+  font-size: var(--fs-md);
+  color: #2c66b8;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.link-btn:hover { text-decoration: underline; }
+
+.push-left { margin-right: auto; }
+.push-right { margin-left: auto; }
+
+/* Text fields are sunk into the surface. */
+.field {
+  height: 30px;
+  padding: 0 9px;
+  font-size: var(--fs-md);
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #aca69a;
+  border-top-color: #958f83;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .13), 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+.field::placeholder { color: #a39d92; }
+
+.field:focus {
+  outline: none;
+  border-color: #5a8fd6;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1), var(--ring);
+}
+
+.field-lg { width: 100%; height: 36px; font-size: 15px; }
+
+.field-area {
+  width: 100%;
+  height: auto;
+  padding: 8px 10px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.field-code {
+  width: 100%;
+  height: auto;
+  min-height: 220px;
+  padding: 10px 12px;
+  font: 12.5px/1.5 var(--mono);
+  white-space: pre;
+  resize: vertical;
+}
+
+.form-label {
+  display: block;
+  margin: 0 0 5px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink-mid);
+}
+
+.field-error {
+  min-height: 16px;
+  margin: 3px 0 8px;
+  font-size: var(--fs-sm);
+  color: var(--red);
+}
+
+.form-foot-note {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+/* ---------- src/css/40-panels.css ---------- */
+/* ==========================================================================
+   40-panels.css — the raised panel with its bevelled header bar, counts,
+   section labels and empty states. Shared by every column.
+   ========================================================================== */
+
+.panel {
+  background: linear-gradient(var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--raise-2);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 12px 0 14px;
+  background: linear-gradient(var(--head-hi), var(--head-lo));
+  border-bottom: 1px solid #cdc8be;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+.panel.is-collapsed .panel-head {
+  border-bottom: 0;
+  border-radius: var(--radius-lg);
+}
+
+/* Engraved, small-caps-style header label. */
+.panel-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4c473f;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.panel-sub {
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 #fff;
+}
+
+.count-badge {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .25);
+  background: linear-gradient(#958f85, #6f6a61);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .25), 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+.count-badge:empty { display: none; }
+
+.panel-empty {
+  padding: 14px 16px 16px;
+  color: var(--ink-dim);
+  max-width: 70ch;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 2px 7px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 #fff;
+}
+
+.section-count { font-weight: 400; letter-spacing: 0; }
+
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.disclosure .icon {
+  color: var(--ink-dim);
+  transform: rotate(-90deg);
+  transition: transform .15s;
+}
+
+.disclosure.is-open .icon { transform: none; }
+/* ---------- src/css/50-now.css ---------- */
+/* ==========================================================================
+   50-now.css — the "Now" card: the task in focus, its controls, and the
+   glass-fronted clock.
+   ========================================================================== */
+
+.now-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  min-height: 262px;
+  background: linear-gradient(#ffffff, #f4f2ee);
+  border: 1px solid #a7a197;
+  border-radius: 13px;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 3px rgba(40, 34, 24, .1), 0 10px 28px rgba(40, 34, 24, .17);
+}
+
+.now-main {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+  padding: 22px 26px 20px;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.live-lamp {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d4f8db, #41b45f 55%, #287f40);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .25), 0 0 6px rgba(65, 180, 95, .7);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+.live-lamp.is-off {
+  background: radial-gradient(circle at 35% 30%, #f3f1ec, #bfbab0 60%, #9d978c);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .2);
+  animation: none;
+}
+
+.now-title {
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.015em;
+  color: #1f1d19;
+  overflow-wrap: anywhere;
+}
+
+.now-title.is-placeholder {
+  font-weight: 300;
+  color: var(--ink-faint);
+}
+
+.now-notes {
+  max-height: 9.6em;
+  overflow: auto;
+  padding: 8px 11px;
+  font-size: 13.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-mid);
+  background: #f5f3ee;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .07);
+}
+
+.now-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.now-empty-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-mid);
+}
+
+.now-card.is-empty .now-actions { margin-top: 0; }
+
+.now-next {
+  font-size: 12.5px;
+  color: var(--ink-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.or-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+  font-size: var(--fs-xs);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.or-rule::before, .or-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #d6d1c7;
+  box-shadow: 0 1px 0 #fff;
+}
+
+.quick-start {
+  display: flex;
+  gap: 8px;
+  max-width: 560px;
+  margin-top: auto;
+}
+
+.quick-start .field { flex: 1; min-width: 0; height: 38px; font-size: 14px; }
+.quick-start .btn { height: 38px; }
+
+/* The right-hand column is a slightly sunken tray holding the clock. */
+.now-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  background: linear-gradient(#f1efea, #e7e4dd);
+  border-left: 1px solid #d3cec4;
+  border-radius: 0 12px 12px 0;
+  box-shadow: inset 1px 0 0 #fff, inset 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.clock-face {
+  position: relative;
+  overflow: hidden;
+  padding: 13px 14px 11px;
+  text-align: center;
+  color: var(--glass-ink);
+  background: linear-gradient(var(--glass-hi), var(--glass-lo));
+  border: 1px solid #0f1114;
+  border-radius: 11px;
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .05), 0 1px 0 #fff;
+}
+
+/* The glass: a curved highlight over the top half. */
+.clock-face::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  height: 46%;
+  border-radius: 10px 10px 50% 50% / 10px 10px 16px 16px;
+  background: linear-gradient(rgba(255, 255, 255, .13), rgba(255, 255, 255, .02));
+  pointer-events: none;
+}
+
+.clock-label, .clock-sub {
+  font-size: 10.5px;
+  color: var(--glass-dim);
+}
+
+.clock-label {
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.clock-digits {
+  margin: 1px 0 2px;
+  font-size: 48px;
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: .01em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 16px rgba(255, 246, 225, .28);
+  white-space: nowrap;
+}
+
+.clock-face.is-off .clock-digits {
+  color: #59616b;
+  text-shadow: none;
+}
+
+.now-stats { display: flex; flex-direction: column; }
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 2px;
+  border-bottom: 1px solid #d2cdc3;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.stat:last-child { border-bottom: 0; box-shadow: none; }
+
+.stat-label { font-size: var(--fs-sm); color: var(--ink-dim); }
+
+.stat-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* While a task is dragged, the card says it can take it. */
+.drop-hint { display: none; }
+
+body.dragging-task .now-card .drop-hint {
+  position: absolute;
+  inset: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2a63b5;
+  background: rgba(236, 243, 252, .8);
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 2px rgba(58, 123, 213, .35);
+  pointer-events: none;
+}
+
+.now-card.drop-active .drop-hint {
+  background: rgba(219, 233, 250, .94) !important;
+  box-shadow: inset 0 0 0 2px var(--blue), 0 0 0 4px rgba(58, 123, 213, .18) !important;
+}
+/* ---------- src/css/55-queue.css ---------- */
+/* ==========================================================================
+   55-queue.css — the queue sidebar: add form, up-next tray, later list,
+   task cards and the drop marker.
+   ========================================================================== */
+
+.queue-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.add-form {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 #fff;
+}
+
+.field-row { display: flex; gap: 6px; }
+.field-row .field { flex: 1; min-width: 0; }
+
+.hint {
+  margin-top: 7px;
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+}
+
+.queue-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 14px;
+}
+
+/* The up-next slot is a recessed tray the next card sits in. */
+.tray {
+  min-height: 78px;
+  padding: 8px;
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 10px;
+  box-shadow: var(--sink);
+  transition: background-color .15s, box-shadow .15s;
+}
+
+.tray.drop-active {
+  background: linear-gradient(#cfdbeb, #dfe7f1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .14), inset 0 0 0 2px #5b93dc, 0 0 0 3px rgba(58, 123, 213, .18);
+}
+
+.tray-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 0 12px;
+  font-size: var(--fs-sm);
+  text-align: center;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+
+.later-list {
+  min-height: 70px;
+  margin: 0;
+  padding: 4px 0 40px;
+  list-style: none;
+  border-radius: 8px;
+}
+
+.later-item { margin-bottom: 7px; }
+
+.list-empty {
+  padding: 8px 4px;
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+}
+
+body.dragging-task .later-list .list-empty { visibility: hidden; }
+
+/* The marker takes no space; it is drawn into the gap between cards. */
+.drop-marker {
+  position: relative;
+  height: 0;
+  list-style: none;
+}
+
+.drop-marker::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 2px;
+  top: -5px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(#6aa8ef, #2f6fca);
+  box-shadow: 0 1px 2px rgba(30, 80, 160, .45);
+}
+
+.drop-marker::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #2f6fca;
+}
+
+/* ------------------------------------------------------------- task card */
+
+.task-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 7px 9px 6px;
+  background: linear-gradient(#ffffff, #f4f2ee);
+  border: 1px solid #bcb7ad;
+  border-radius: 8px;
+  box-shadow: var(--raise-1);
+  cursor: grab;
+  transition: box-shadow .12s, opacity .12s;
+}
+
+.task-card:hover {
+  border-color: #a8a297;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(40, 34, 24, .16);
+}
+
+.task-card:active { cursor: grabbing; }
+
+.task-card.is-next {
+  padding: 11px 8px 11px 7px;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 4px rgba(40, 34, 24, .18);
+}
+
+.task-card.is-dragging { opacity: .4; }
+
+/* A knurled grip down the side says "you can pick this up". */
+.grip {
+  flex: none;
+  align-self: stretch;
+  width: 8px;
+  margin: 1px 1px 1px 2px;
+  background-image: radial-gradient(circle, #a39d92 0.9px, transparent 1.3px);
+  background-size: 4px 4px;
+  opacity: .85;
+}
+
+.task-body { flex: 1; min-width: 0; }
+
+.task-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.task-card.is-next .task-title { font-size: 14.5px; }
+
+.task-note {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-meta {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+}
+
+.meta-dot {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .7;
+}
+
+.task-tools {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 1px;
+  padding: 1px 1px 1px 18px;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(to right, rgba(253, 252, 251, 0), #fdfcfb 16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+}
+
+.task-card:hover .task-tools,
+.task-card:focus-within .task-tools { opacity: 1; pointer-events: auto; }
+
+body.dragging-task .task-tools { opacity: 0 !important; }
+/* ---------- src/css/60-lanes.css ---------- */
+/* ==========================================================================
+   60-lanes.css — the background lane (with its barber-pole progress bars)
+   and the done log.
+   ========================================================================== */
+
+/* ------------------------------------------------------------ background */
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.bg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  background: linear-gradient(#ffffff, #f3f1ec);
+  border: 1px solid #bab5aa;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(40, 34, 24, .13);
+}
+
+.bg-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.bg-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Indeterminate progress: something is working, nobody knows how long. */
+.pole-track {
+  height: 11px;
+  overflow: hidden;
+  background: linear-gradient(#cdc9c1, #e3e0d9);
+  border: 1px solid #a49e92;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25), 0 1px 0 #fff;
+}
+
+.pole {
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .6), rgba(255, 255, 255, .05) 55%, rgba(0, 0, 0, .1)),
+    repeating-linear-gradient(-45deg, #5b99e6 0 7px, #94c2f5 7px 14px);
+  background-size: 100% 100%, 19.8px 100%;
+  border-radius: 5px;
+  animation: pole 1.1s linear infinite;
+}
+
+@keyframes pole {
+  to { background-position: 0 0, 19.8px 0; }
+}
+
+.bg-times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bg-time-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bg-time-main .icon { color: var(--ink-dim); }
+
+.bg-time-sub {
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+
+.bg-actions { display: flex; gap: 6px; }
+
+/* ------------------------------------------------------------------ done */
+
+.done-table { padding: 2px 0 8px; }
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px 5px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 #fff;
+  border-bottom: 1px solid #e0dcd4;
+}
+
+.day-count { font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.done-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 96px 62px minmax(120px, 170px) 58px;
+  align-items: center;
+  gap: 12px;
+  min-height: 33px;
+  padding: 4px 12px 4px 16px;
+}
+
+.done-row.is-alt { background: rgba(80, 70, 50, .035); }
+.done-row:hover { background: rgba(58, 123, 213, .07); }
+
+.done-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  border-radius: 50%;
+  background: linear-gradient(#7fcf93, #3d9a57);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 0 1px #2c7d43, 0 1px 1px rgba(0, 0, 0, .15);
+}
+
+.done-check .icon { width: 12px; height: 12px; stroke-width: 2.6; }
+
+.done-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.done-when, .done-took, .done-focus {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink-mid);
+}
+
+.done-took { font-weight: 700; color: var(--ink); text-align: right; }
+.done-focus { overflow: hidden; text-overflow: ellipsis; }
+
+.done-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1px;
+  opacity: 0;
+}
+
+.done-row:hover .done-tools,
+.done-row:focus-within .done-tools { opacity: 1; }
+/* ---------- src/css/70-overlays.css ---------- */
+/* ==========================================================================
+   70-overlays.css — dialogs, pop-up menus, toasts, the YAML view and the
+   file-drop veil.
+   ========================================================================== */
+
+#layer { position: relative; z-index: 50; }
+
+/* ---------------------------------------------------------------- dialog */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 9vh 20px 20px;
+  background: rgba(40, 36, 30, .38);
+  animation: fade-in .12s ease-out;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 540px;
+  max-width: 100%;
+  max-height: 82vh;
+  overflow: hidden;
+  background: linear-gradient(#fbfaf8, #f0eee9);
+  border: 1px solid #7d776c;
+  border-radius: 11px;
+  box-shadow: 0 26px 70px rgba(20, 16, 10, .45), 0 4px 12px rgba(20, 16, 10, .25), inset 0 1px 0 #fff;
+  animation: drop-in .16s ease-out;
+}
+
+.dialog-wide { width: 780px; }
+
+.dialog-titlebar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 8px 0 16px;
+  background: linear-gradient(#f9f8f6, #dfdcd5);
+  border-bottom: 1px solid #aea89d;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+.dialog-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.titlebar-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: #625d54;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.titlebar-close:hover {
+  color: #fff;
+  background: linear-gradient(#e0796d, #bd3d2f);
+  border-color: var(--red-edge);
+}
+
+.dialog-body {
+  padding: 16px 18px 18px;
+  overflow: auto;
+}
+
+.dialog-body p { margin: 0 0 10px; }
+
+.dialog-message { font-size: 13.5px; }
+
+.dialog-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(#eeece7, #e3e0d9);
+  border-top: 1px solid #d0cbc1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85);
+}
+
+/* ------------------------------------------------------------- YAML view */
+
+.code-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: var(--fs-sm);
+  color: var(--ink-mid);
+}
+
+.code {
+  max-height: 56vh;
+  margin: 0;
+  overflow: auto;
+  padding: 12px 14px;
+  font: 12.5px/1.55 var(--mono);
+  white-space: pre;
+  tab-size: 2;
+  color: #e7e3da;
+  background: linear-gradient(#272b31, #1c1f24);
+  border: 1px solid #0f1114;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .5), 0 1px 0 #fff;
+}
+
+.code:focus-visible { outline-offset: 3px; }
+
+.y-comment { color: #7f8893; font-style: italic; }
+.y-key { color: #8cc4ff; }
+.y-punct { color: #9aa3ad; }
+.y-dash { color: #d7a35a; }
+.y-str { color: #ece8df; }
+.y-num { color: #e6b673; }
+.y-lit { color: #c9a0f0; }
+.y-time { color: #a3d79e; }
+.y-text { color: #d8cfb9; }
+
+/* ---------------------------------------------------------------- import */
+
+.import-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  color: var(--ink-mid);
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 9px;
+  box-shadow: var(--sink);
+}
+
+.import-drop.is-over {
+  background: linear-gradient(#cfdbeb, #dfe7f1);
+  box-shadow: inset 0 0 0 2px #5b93dc;
+}
+
+.import-source {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.import-verdict {
+  margin-top: 10px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  color: var(--ink-mid);
+  background: #ebe8e2;
+  border: 1px solid #d4cfc5;
+  border-radius: 7px;
+}
+
+.import-verdict.is-ok {
+  color: #1f5b2e;
+  background: linear-gradient(#f0f9f1, #e2f2e4);
+  border-color: #9ccaa6;
+}
+
+.import-verdict.is-error {
+  color: #7c2219;
+  background: linear-gradient(#fcf1ef, #f7e2df);
+  border-color: #dda59e;
+}
+
+.import-warnings { margin: 6px 0 0 18px; padding: 0; }
+
+/* ----------------------------------------------------------------- about */
+
+.dialog-about .dialog-body { font-size: 13.5px; }
+
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.about-mark svg { width: 52px; height: 52px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .25)); }
+
+.about-name { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+
+.keys {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.keys td {
+  padding: 5px 8px;
+  border-top: 1px solid #e0dcd4;
+}
+
+.keys td:first-child { width: 150px; white-space: nowrap; }
+
+/* ----------------------------------------------------------------- menus */
+
+.menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 230px;
+  padding: 5px 0;
+  background: linear-gradient(#fdfdfc, #f1efeb);
+  border: 1px solid #8d877c;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(30, 25, 15, .28), 0 2px 6px rgba(30, 25, 15, .18), inset 0 1px 0 #fff;
+  animation: fade-in .08s ease-out;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 16px 6px 11px;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.menu-item:hover:not([disabled]),
+.menu-item:focus {
+  outline: none;
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .25);
+  background: linear-gradient(#64a1ea, #3a7bd5);
+}
+
+.menu-item.is-danger { color: var(--red); }
+
+.menu-item.is-danger:hover,
+.menu-item.is-danger:focus {
+  color: #fff;
+  background: linear-gradient(#e0796d, #bd3d2f);
+}
+
+.menu-item[disabled] { color: var(--ink-faint); cursor: default; }
+
+.menu-icon { display: inline-flex; width: 16px; }
+.menu-label { flex: 1; }
+.menu-hint { font-size: var(--fs-xs); opacity: .7; }
+
+.menu-sep {
+  height: 1px;
+  margin: 5px 0;
+  background: #d4cfc5;
+  box-shadow: 0 1px 0 #fff;
+}
+
+/* ---------------------------------------------------------------- toasts */
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--statusbar-h) + 18px);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 660px;
+  padding: 7px 7px 7px 15px;
+  font-size: var(--fs-md);
+  color: #f4f1ea;
+  background: linear-gradient(rgba(62, 66, 72, .97), rgba(32, 35, 39, .97));
+  border: 1px solid #101214;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .13);
+  pointer-events: auto;
+  animation: rise-in .18s ease-out;
+  transition: opacity .18s, transform .18s;
+}
+
+.toast.is-leaving { opacity: 0; transform: translateY(6px); }
+
+.toast-error { background: linear-gradient(rgba(156, 48, 36, .97), rgba(116, 30, 22, .97)); }
+
+.toast-text { overflow-wrap: anywhere; }
+
+.toast-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(#5d636c, #3f444b 50%, #33373d 51%, #3c4148);
+  border: 1px solid #121416;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
+  cursor: pointer;
+}
+
+.toast-btn:hover { background: linear-gradient(#6b727c, #4a5058 50%, #3c4148 51%, #464b53); }
+
+.toast-x {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #a7adb5;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.toast-x:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+
+/* ------------------------------------------------------ file drop veil */
+
+.file-drop-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 60, 90, .25);
+  pointer-events: none;
+}
+
+body.file-over .file-drop-veil { display: flex; }
+
+.file-drop-card {
+  padding: 22px 30px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #24508f;
+  background: linear-gradient(#ffffff, #eef3fa);
+  border: 1px solid #6c95cc;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="toolbar" role="banner">
+    <div class="brand">
+      <span class="brand-mark" id="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">QDVC Focus</span>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <div class="idle-slot" id="idle-slot"></div>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-tools">
+      <button type="button" class="tbtn" id="btn-undo" data-act="undo" disabled title="Nothing to undo"><span data-icon="undo"></span><span>Undo</span></button>
+      <div class="segmented" role="group" aria-label="State">
+        <button type="button" class="tbtn" data-act="show-yaml" title="Show the current state as YAML (Y)"><span data-icon="code"></span><span>YAML</span></button>
+        <button type="button" class="tbtn" data-act="import" title="Import a saved state"><span data-icon="importFile"></span><span>Import</span></button>
+        <button type="button" class="tbtn" data-act="export" title="Download the current state as a .yaml file"><span data-icon="exportFile"></span><span>Export</span></button>
+      </div>
+      <button type="button" class="tbtn tbtn-round" data-act="about" title="About and keyboard shortcuts (?)" aria-label="About and keyboard shortcuts"><span data-icon="info"></span></button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <div class="col-main">
+      <section class="now-slot" id="now" aria-label="Working on now"></section>
+      <div id="background"></div>
+      <div id="done"></div>
+    </div>
+
+    <aside class="col-side panel queue-panel" aria-label="Queue">
+      <div class="panel-head">
+        <span class="panel-title">Queue</span>
+        <span class="count-badge" id="queue-count"></span>
+      </div>
+      <form class="add-form" data-form="add" autocomplete="off">
+        <div class="field-row">
+          <input class="field" id="add-input" name="title" maxlength="300" placeholder="Add a task…" aria-label="Add a task to the queue">
+          <button type="submit" class="btn"><span data-icon="plus"></span><span>Add</span></button>
+        </div>
+        <div class="hint"><kbd>Enter</kbd> adds to the end · <kbd>Shift</kbd>+<kbd>Enter</kbd> adds as up next</div>
+      </form>
+      <div class="queue-body" id="queue-body"></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar" id="statusbar" role="contentinfo"></footer>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="layer"></div>
+<div class="file-drop-veil" aria-hidden="true"><div class="file-drop-card">Drop the .yaml file to import it</div></div>
+<input type="file" id="file-input" accept=".yaml,.yml,.txt,text/yaml,application/yaml,text/plain" hidden>
+<script>
+"use strict";
+/* ---------- src/js/00-ns.js ---------- */
+/* ==========================================================================
+   00-ns.js — namespace and product constants.
+   Must not touch the DOM or localStorage at load time: the test harnesses
+   load every module under plain Node.
+   ========================================================================== */
+
+var QDF = (typeof QDF !== 'undefined') ? QDF : {};
+
+/* Change APP.name to re-brand the whole application. */
+QDF.APP = {
+  name: 'QDVC Focus',
+  version: '1.0.0',
+  /* Written as `format:` at the top of every export and of the saved state.
+     Independent of the name, so a rename does not invalidate old exports. */
+  format: 'qdvc-focus/1',
+  /* localStorage keys. Independent of the name for the same reason. */
+  storageKey: 'qdvc-focus.v1',
+  prefsKey: 'qdvc-focus.prefs.v1',
+  /* How many steps of undo are kept in memory (not persisted). */
+  undoDepth: 40
+};
+
+/* Thresholds for the "since last update" indicator, in minutes. */
+QDF.IDLE = {
+  warnAfter: 20,
+  alertAfter: 60
+};
+
+QDF.view = QDF.view || {};
+/* ---------- src/js/10-util.js ---------- */
+/* ==========================================================================
+   10-util.js — small helpers: escaping, ids, time arithmetic and formatting,
+   downloads. Times are stored as ISO 8601 strings in UTC and handled as
+   milliseconds since the epoch in between.
+   ========================================================================== */
+
+QDF.util = (function () {
+
+  var ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+      return ENTITIES[c];
+    });
+  }
+
+  function pad(n, width) {
+    var s = String(n);
+    while (s.length < (width || 2)) s = '0' + s;
+    return s;
+  }
+
+  function iso(ms) {
+    return new Date(ms).toISOString();
+  }
+
+  /* ISO string → ms, or null when it is not a usable time. */
+  function ms(isoString) {
+    if (typeof isoString !== 'string' || !isoString) return null;
+    var t = Date.parse(isoString);
+    return isNaN(t) ? null : t;
+  }
+
+  function isTime(value) {
+    return ms(value) !== null;
+  }
+
+  /* Whole seconds from an ISO time to `nowMs`, never negative. */
+  function secondsSince(isoString, nowMs) {
+    var t = ms(isoString);
+    if (t === null) return 0;
+    return Math.max(0, Math.floor((nowMs - t) / 1000));
+  }
+
+  function uid(nowMs) {
+    return 't-' + Math.floor(nowMs || Date.now()).toString(36) + '-' +
+      Math.random().toString(36).slice(2, 6);
+  }
+
+  /* 0:42:07 — always hours, so the digits do not jump about. */
+  function clock(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    return h + ':' + pad(m) + ':' + pad(sec % 60);
+  }
+
+  /* Human duration. `precise` keeps seconds while under an hour, for values
+     that tick on screen; otherwise the shortest honest phrasing. */
+  function duration(sec, precise) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    var d = Math.floor(sec / 86400);
+    var h = Math.floor((sec % 86400) / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    if (d) return d + 'd ' + h + 'h';
+    if (h) return h + 'h ' + pad(m) + 'm';
+    if (precise) return m ? m + 'm ' + pad(s) + 's' : s + 's';
+    if (m) return m + 'm';
+    return sec ? '<1m' : '0m';
+  }
+
+  function ago(sec) {
+    if (sec < 60) return 'just now';
+    return duration(sec) + ' ago';
+  }
+
+  function localDate(isoString) {
+    var t = ms(isoString);
+    return t === null ? null : new Date(t);
+  }
+
+  /* 14:05 in local time. */
+  function timeOfDay(isoString) {
+    var d = localDate(isoString);
+    return d ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : '';
+  }
+
+  function dayKey(isoString) {
+    var d = localDate(isoString);
+    return d ? d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) : '';
+  }
+
+  /* Today / Yesterday / Mon 19 Oct / Mon 19 Oct 2025 */
+  function dayLabel(isoString, nowMs) {
+    var d = localDate(isoString);
+    if (!d) return 'Unknown day';
+    var key = dayKey(isoString);
+    if (key === dayKey(iso(nowMs))) return 'Today';
+    if (key === dayKey(iso(nowMs - 86400000))) return 'Yesterday';
+    var label = DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+    if (d.getFullYear() !== new Date(nowMs).getFullYear()) label += ' ' + d.getFullYear();
+    return label;
+  }
+
+  /* 2026-10-21-1405, local time, for file names. */
+  function fileStamp(nowMs) {
+    var d = new Date(nowMs);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      '-' + pad(d.getHours()) + pad(d.getMinutes());
+  }
+
+  function plural(n, one, many) {
+    return n + ' ' + (n === 1 ? one : (many || one + 's'));
+  }
+
+  function firstLine(text) {
+    return String(text || '').split('\n')[0].trim();
+  }
+
+  function download(filename, text, mime) {
+    var blob = new Blob([text], { type: mime || 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function readFile(file, done) {
+    var reader = new FileReader();
+    reader.onload = function () { done(null, String(reader.result)); };
+    reader.onerror = function () { done(reader.error || new Error('Could not read the file.')); };
+    reader.readAsText(file);
+  }
+
+  return {
+    esc: esc, pad: pad, iso: iso, ms: ms, isTime: isTime,
+    secondsSince: secondsSince, uid: uid,
+    clock: clock, duration: duration, ago: ago,
+    timeOfDay: timeOfDay, dayKey: dayKey, dayLabel: dayLabel, fileStamp: fileStamp,
+    plural: plural, firstLine: firstLine,
+    download: download, readFile: readFile
+  };
+})();
+/* ---------- src/js/15-yaml.js ---------- */
+/* ==========================================================================
+   15-yaml.js — a small, strict YAML subset, emitted and parsed by hand.
+
+   Emits block mappings, block sequences (of scalars or of mappings), plain and
+   double-quoted scalars, and `|` / `|-` literal blocks for multi-line text.
+   Output is deterministic: key order is insertion order.
+
+   Parses everything it emits, plus the hand edits people actually make:
+   comments, blank lines, a leading `---`, CRLF line endings, single-quoted
+   strings, `~` for null, `[]` / `{}` and one-line `[a, b]` lists, sequences
+   written at the same indentation as their key, and `>` folded blocks.
+   Anchors, tags, multi-document streams and flow mappings are not supported
+   and are reported as errors rather than misread.
+   ========================================================================== */
+
+QDF.yaml = (function () {
+
+  /* ---------------------------------------------------------------- emit */
+
+  function spaces(n) {
+    return new Array(n + 1).join(' ');
+  }
+
+  function isMap(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  var RESERVED = /^(true|false|yes|no|on|off|null|~|y|n)$/i;
+  var NUMERIC = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$|^0x[0-9a-f]+$|^[+-]?\.(inf|nan)$/i;
+
+  function scalar(v) {
+    if (v === null) return 'null';
+    if (v === true || v === false) return String(v);
+    if (typeof v === 'number') return isFinite(v) ? String(v) : JSON.stringify(String(v));
+    var s = String(v);
+    if (s === '' ||
+        /^[\s\-?:,\[\]{}#&*!|>'"%@`]/.test(s) ||
+        /\s$/.test(s) ||
+        /:(\s|$)/.test(s) ||
+        /\s#/.test(s) ||
+        /[\u0000-\u001f\u007f]/.test(s) ||
+        RESERVED.test(s) ||
+        NUMERIC.test(s)) {
+      return JSON.stringify(s);
+    }
+    return s;
+  }
+
+  function keyText(k) {
+    return /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(k) ? k : JSON.stringify(String(k));
+  }
+
+  /* Multi-line text reads best as a literal block, but only when the block
+     can be read back exactly: no tabs or CRs, no whitespace-only lines, no
+     leading space on the first line, at most one trailing newline. */
+  function blockable(s) {
+    if (typeof s !== 'string' || s.indexOf('\n') === -1) return false;
+    if (/[\r\t]/.test(s) || /\n\n$/.test(s) || /^\n/.test(s)) return false;
+    if (/^ /.test(s)) return false;
+    if (/[\u0000-\u0008\u000b-\u001f\u007f]/.test(s)) return false;
+    var lines = s.replace(/\n$/, '').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (/^\s+$/.test(lines[i])) return false;
+    }
+    return true;
+  }
+
+  function emitValue(prefix, v, indent, out) {
+    if (blockable(v)) {
+      var trailing = /\n$/.test(v);
+      out.push(prefix + ' ' + (trailing ? '|' : '|-'));
+      (trailing ? v.slice(0, -1) : v).split('\n').forEach(function (line) {
+        out.push(line === '' ? '' : spaces(indent + 2) + line);
+      });
+    } else {
+      out.push(prefix + ' ' + scalar(v));
+    }
+  }
+
+  function hasKeys(obj) {
+    return Object.keys(obj).some(function (k) { return obj[k] !== undefined; });
+  }
+
+  function emitMap(obj, indent, out) {
+    Object.keys(obj).forEach(function (k) {
+      var v = obj[k];
+      if (v === undefined) return;
+      var head = spaces(indent) + keyText(k) + ':';
+      if (Array.isArray(v)) {
+        if (!v.length) { out.push(head + ' []'); return; }
+        out.push(head);
+        emitSeq(v, indent + 2, out);
+      } else if (isMap(v)) {
+        if (!hasKeys(v)) { out.push(head + ' {}'); return; }
+        out.push(head);
+        emitMap(v, indent + 2, out);
+      } else {
+        emitValue(head, v, indent, out);
+      }
+    });
+  }
+
+  function emitSeq(arr, indent, out) {
+    arr.forEach(function (item) {
+      var dash = spaces(indent) + '-';
+      if (isMap(item) && hasKeys(item)) {
+        var tmp = [];
+        emitMap(item, indent + 2, tmp);
+        tmp[0] = dash + ' ' + tmp[0].slice(indent + 2);
+        Array.prototype.push.apply(out, tmp);
+      } else if (isMap(item)) {
+        out.push(dash + ' {}');
+      } else if (Array.isArray(item) && item.length) {
+        out.push(dash);
+        emitSeq(item, indent + 2, out);
+      } else if (Array.isArray(item)) {
+        out.push(dash + ' []');
+      } else {
+        emitValue(dash, item, indent, out);
+      }
+    });
+  }
+
+  /* `blankBetween` puts an empty line between top-level keys whose value
+     spans several lines, which makes a long file far easier to scan. */
+  function emit(doc, blankBetween) {
+    var out = [];
+    if (!isMap(doc)) throw new Error('emit expects a mapping at the top level');
+    var keys = Object.keys(doc).filter(function (k) { return doc[k] !== undefined; });
+    var lastMulti = false;
+    keys.forEach(function (k, n) {
+      var chunk = {};
+      chunk[k] = doc[k];
+      var lines = [];
+      emitMap(chunk, 0, lines);
+      if (blankBetween && n > 0 && (lines.length > 1 || lastMulti)) out.push('');
+      lastMulti = lines.length > 1;
+      Array.prototype.push.apply(out, lines);
+    });
+    return out.join('\n') + '\n';
+  }
+
+  /* --------------------------------------------------------------- parse */
+
+  function parse(text) {
+    var lines = String(text).replace(/^﻿/, '').replace(/\r\n?/g, '\n').split('\n');
+    var i = 0;
+    var at = null;   /* the line a scalar being read came from */
+
+    function fail(message, lineIndex) {
+      var n = (lineIndex !== undefined ? lineIndex : at !== null ? at : i) + 1;
+      var err = new Error('Line ' + n + ': ' + message);
+      err.line = n;
+      throw err;
+    }
+
+    function isSkippable(line) {
+      return /^\s*(#.*)?$/.test(line);
+    }
+
+    function indentOf(line) {
+      var m = /^( *)(\t?)/.exec(line);
+      if (m[2]) fail('Tabs cannot be used for indentation; use spaces.');
+      return m[1].length;
+    }
+
+    function skip() {
+      while (i < lines.length && isSkippable(lines[i])) i++;
+    }
+
+    function isDash(body) {
+      return body === '-' || body.slice(0, 2) === '- ';
+    }
+
+    /* Reads a quoted scalar starting at s[0]; returns { value, end }. */
+    function readQuoted(s) {
+      var q = s.charAt(0), out = '', j = 1;
+      if (q === "'") {
+        while (j < s.length) {
+          var c = s.charAt(j);
+          if (c === "'") {
+            if (s.charAt(j + 1) === "'") { out += "'"; j += 2; continue; }
+            return { value: out, end: j + 1 };
+          }
+          out += c; j++;
+        }
+        fail('Unclosed single quote.');
+      }
+      var ESC = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/', '0': '\u0000',
+                  b: '\b', f: '\f', e: '\u001b', a: '\u0007', v: '\u000b', ' ': ' ' };
+      while (j < s.length) {
+        var ch = s.charAt(j);
+        if (ch === '"') return { value: out, end: j + 1 };
+        if (ch === '\\') {
+          var nx = s.charAt(j + 1);
+          if (nx === 'u' || nx === 'x' || nx === 'U') {
+            var len = nx === 'u' ? 4 : nx === 'x' ? 2 : 8;
+            var hex = s.substr(j + 2, len);
+            if (!new RegExp('^[0-9a-fA-F]{' + len + '}$').test(hex)) fail('Bad escape \\' + nx + hex + '.');
+            var code = parseInt(hex, 16);
+            out += code > 0xffff
+              ? String.fromCharCode(0xd800 + ((code - 0x10000) >> 10), 0xdc00 + ((code - 0x10000) & 0x3ff))
+              : String.fromCharCode(code);
+            j += 2 + len;
+            continue;
+          }
+          if (!Object.prototype.hasOwnProperty.call(ESC, nx)) fail('Unknown escape \\' + nx + '.');
+          out += ESC[nx];
+          j += 2;
+          continue;
+        }
+        out += ch; j++;
+      }
+      fail('Unclosed double quote.');
+    }
+
+    function afterQuoted(rest) {
+      if (!/^\s*(#.*)?$/.test(rest)) fail('Unexpected text after a quoted value: ' + rest.trim());
+    }
+
+    function parseScalar(raw) {
+      var s = raw.trim();
+      if (s.charAt(0) === '"' || s.charAt(0) === "'") {
+        var q = readQuoted(s);
+        afterQuoted(s.slice(q.end));
+        return q.value;
+      }
+      s = s.replace(/(^|\s)#.*$/, '').trim();
+      if (/^[&*!]/.test(s)) fail('Anchors, aliases and tags are not supported.');
+      if (s === '' || s === '~' || /^null$/i.test(s)) return null;
+      if (/^true$/i.test(s)) return true;
+      if (/^false$/i.test(s)) return false;
+      if (/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(s)) return Number(s);
+      if (s === '[]') return [];
+      if (s === '{}') return {};
+      if (s.charAt(0) === '[') {
+        if (s.charAt(s.length - 1) !== ']') fail('Unclosed [ list.');
+        return splitFlow(s.slice(1, -1)).map(parseScalar);
+      }
+      if (s.charAt(0) === '{') fail('Inline {…} mappings are not supported; write one key per line.');
+      return s;
+    }
+
+    function splitFlow(inner) {
+      var parts = [], cur = '', quote = '';
+      for (var j = 0; j < inner.length; j++) {
+        var c = inner.charAt(j);
+        if (quote) {
+          cur += c;
+          if (c === '\\' && quote === '"') { cur += inner.charAt(++j); continue; }
+          if (c === quote) quote = '';
+        } else if (c === '"' || c === "'") { quote = c; cur += c; }
+        else if (c === ',') { parts.push(cur); cur = ''; }
+        else if (c === '[' || c === '{') fail('Nested inline lists are not supported.');
+        else cur += c;
+      }
+      if (cur.trim() !== '' || parts.length) parts.push(cur);
+      return parts.filter(function (p, n) { return p.trim() !== '' || n < parts.length - 1; });
+    }
+
+    /* "key: rest" → { key, rest } or null when the text is not a mapping
+       entry. A colon only separates when followed by a space or the end. */
+    function splitKey(body) {
+      var key, rest;
+      if (body.charAt(0) === '"' || body.charAt(0) === "'") {
+        var q = readQuoted(body);
+        var after = body.slice(q.end);
+        var m = /^\s*:(\s+|$)/.exec(after);
+        if (!m) return null;
+        key = q.value;
+        rest = after.slice(m[0].length);
+      } else {
+        if (body.charAt(0) === '#') return null;
+        var at = -1;
+        for (var j = 0; j < body.length; j++) {
+          if (body.charAt(j) === ':' && (j === body.length - 1 || /\s/.test(body.charAt(j + 1)))) { at = j; break; }
+          if (body.charAt(j) === '#' && j > 0 && /\s/.test(body.charAt(j - 1))) break;
+        }
+        if (at < 1) return null;
+        key = body.slice(0, at).trim();
+        rest = body.slice(at + 1);
+        if (key.charAt(0) === '?') fail('Complex keys are not supported.');
+      }
+      return { key: key, rest: rest.trim() };
+    }
+
+    function parseBlock(parentIndent, indicator) {
+      var folded = indicator.charAt(0) === '>';
+      var chomp = indicator.charAt(1) || '';
+      var raw = [], blockIndent = -1;
+      while (i < lines.length) {
+        var line = lines[i];
+        if (/^\s*$/.test(line)) { raw.push(''); i++; continue; }
+        var ind = indentOf(line);
+        if (ind <= parentIndent) break;
+        if (blockIndent < 0) blockIndent = ind;
+        if (ind < blockIndent) fail('This line is indented less than the text block it belongs to.');
+        raw.push(line.slice(blockIndent));
+        i++;
+      }
+      var trailing = 0;
+      while (raw.length && raw[raw.length - 1] === '') { raw.pop(); trailing++; }
+      if (!raw.length) return '';
+      var body;
+      if (folded) {
+        body = '';
+        raw.forEach(function (l, n) {
+          if (n === 0) body = l;
+          else if (l === '') body += '\n';
+          else if (raw[n - 1] === '' || /^\s/.test(l)) body += (/\n$/.test(body) ? '' : '\n') + l;
+          else body += ' ' + l;
+        });
+      } else {
+        body = raw.join('\n');
+      }
+      if (chomp === '-') return body;
+      if (chomp === '+') return body + '\n' + new Array(trailing + 1).join('\n');
+      return body + '\n';
+    }
+
+    function parseNode(minIndent) {
+      skip();
+      if (i >= lines.length) return null;
+      var ind = indentOf(lines[i]);
+      if (ind < minIndent) return null;
+      return isDash(lines[i].slice(ind)) ? parseSeq(ind) : parseMap(ind);
+    }
+
+    function parseValue(rest, ownIndent, lineIndex) {
+      if (/^[|>][-+]?\s*(#.*)?$/.test(rest)) return parseBlock(ownIndent, rest.replace(/\s*#.*$/, '').trim());
+      var saved = at;
+      at = lineIndex;
+      try {
+        if (/^[|>]/.test(rest)) fail('Unsupported block indicator ' + rest + '.');
+        return parseScalar(rest);
+      } finally {
+        at = saved;
+      }
+    }
+
+    function parseSeq(ind) {
+      var out = [];
+      for (;;) {
+        skip();
+        if (i >= lines.length) break;
+        var li = indentOf(lines[i]);
+        var body = lines[i].slice(li);
+        if (li < ind) break;
+        if (li > ind) fail('Unexpected indentation.');
+        if (!isDash(body)) break;
+        var rest = body === '-' ? '' : body.slice(2);
+        var restTrim = rest.replace(/^ +/, '');
+        var itemIndent = li + 2 + (rest.length - restTrim.length);
+        if (restTrim === '' || restTrim.charAt(0) === '#') {
+          i++;
+          out.push(parseNode(li + 1));
+        } else if (isDash(restTrim)) {
+          lines[i] = spaces(itemIndent) + restTrim;
+          out.push(parseSeq(itemIndent));
+        } else if (splitKey(restTrim)) {
+          lines[i] = spaces(itemIndent) + restTrim;
+          out.push(parseMap(itemIndent));
+        } else {
+          i++;
+          out.push(parseValue(restTrim, li, i - 1));
+        }
+      }
+      return out;
+    }
+
+    function parseMap(ind) {
+      var out = {};
+      for (;;) {
+        skip();
+        if (i >= lines.length) break;
+        var li = indentOf(lines[i]);
+        var body = lines[i].slice(li);
+        if (li < ind) break;
+        if (li > ind) fail('Unexpected indentation.');
+        if (isDash(body)) break;
+        if (li === 0 && /^\.\.\.\s*$/.test(body)) break;
+        if (li === 0 && /^---(\s|$)/.test(body)) fail('Only one document per file is supported.');
+        var kv = splitKey(body);
+        if (!kv) fail('Expected "key: value" but found: ' + body);
+        if (Object.prototype.hasOwnProperty.call(out, kv.key)) fail('Duplicate key "' + kv.key + '".');
+        var lineIndex = i;
+        i++;
+        if (kv.rest === '' || kv.rest.charAt(0) === '#') {
+          skip();
+          if (i < lines.length) {
+            var ni = indentOf(lines[i]);
+            var nb = lines[i].slice(ni);
+            if (ni > li) out[kv.key] = parseNode(ni);
+            else if (ni === li && isDash(nb)) out[kv.key] = parseSeq(ni);
+            else out[kv.key] = null;
+          } else {
+            out[kv.key] = null;
+          }
+        } else {
+          out[kv.key] = parseValue(kv.rest, li, lineIndex);
+        }
+      }
+      return out;
+    }
+
+    skip();
+    if (i < lines.length && /^---\s*(#.*)?$/.test(lines[i])) { i++; }
+    var result = parseNode(0);
+    skip();
+    if (i < lines.length && /^\.\.\.\s*$/.test(lines[i])) { i++; skip(); }
+    if (i < lines.length) fail('Unexpected content: ' + lines[i].trim());
+    return result;
+  }
+
+  return { emit: emit, parse: parse, scalar: scalar };
+})();
+/* ---------- src/js/20-model.js ---------- */
+/* ==========================================================================
+   20-model.js — the domain, as pure operations on a plain state object.
+
+   State:
+     created, lastInteraction   ISO times
+     current                    the task in focus, or null
+     queue                      tasks waiting; queue[0] is "up next"
+     background                 tasks handed to something else (a build, a
+                                render, an upload) while you work on another
+     done                       finished tasks, newest first
+
+   Task:
+     id, title, notes, created
+     started          first time it came into focus
+     focusedSince     set only while it is `current`
+     backgroundSince  set only while it is in `background`
+     finished         set only while it is in `done`
+     focusSeconds, backgroundSeconds
+                      time banked from earlier stretches; the live stretch
+                      is added on top when reading
+
+   Every operation takes the state to change and `now` in milliseconds, and
+   returns something truthy when it changed anything, or null when it did
+   not. The store relies on that to decide whether there is anything to undo.
+   ========================================================================== */
+
+QDF.model = (function () {
+  var U = QDF.util;
+
+  function newState(now) {
+    return {
+      created: U.iso(now),
+      lastInteraction: U.iso(now),
+      current: null,
+      queue: [],
+      background: [],
+      done: []
+    };
+  }
+
+  function cleanTitle(title) {
+    return String(title == null ? '' : title).replace(/\s+/g, ' ').trim();
+  }
+
+  function cleanNotes(notes) {
+    return String(notes == null ? '' : notes).replace(/\r\n?/g, '\n').replace(/\s+$/, '');
+  }
+
+  function newItem(title, notes, now) {
+    return {
+      id: U.uid(now),
+      title: cleanTitle(title) || 'Untitled task',
+      notes: cleanNotes(notes),
+      created: U.iso(now),
+      focusSeconds: 0,
+      backgroundSeconds: 0
+    };
+  }
+
+  var LISTS = ['queue', 'background', 'done'];
+
+  function find(s, id) {
+    if (s.current && s.current.id === id) return { list: 'current', index: 0, item: s.current };
+    for (var n = 0; n < LISTS.length; n++) {
+      var list = s[LISTS[n]];
+      for (var k = 0; k < list.length; k++) {
+        if (list[k].id === id) return { list: LISTS[n], index: k, item: list[k] };
+      }
+    }
+    return null;
+  }
+
+  function detach(s, loc) {
+    if (loc.list === 'current') s.current = null;
+    else s[loc.list].splice(loc.index, 1);
+  }
+
+  function bankFocus(item, now) {
+    if (item.focusedSince) {
+      item.focusSeconds = (item.focusSeconds || 0) + U.secondsSince(item.focusedSince, now);
+      delete item.focusedSince;
+    }
+  }
+
+  function bankBackground(item, now) {
+    if (item.backgroundSince) {
+      item.backgroundSeconds = (item.backgroundSeconds || 0) + U.secondsSince(item.backgroundSince, now);
+      delete item.backgroundSince;
+    }
+  }
+
+  function focus(s, item, now) {
+    if (!item.started) item.started = U.iso(now);
+    item.focusedSince = U.iso(now);
+    s.current = item;
+  }
+
+  /* Takes the current task out of focus and puts it back in the queue,
+     at the front (as up next) or at the end. */
+  function suspend(s, now, where) {
+    var c = s.current;
+    if (!c) return null;
+    bankFocus(c, now);
+    s.current = null;
+    if (where === 'end') s.queue.push(c);
+    else s.queue.unshift(c);
+    return c;
+  }
+
+  /* ------------------------------------------------------------ creating */
+
+  function add(s, title, notes, opts, now) {
+    if (!cleanTitle(title)) return null;
+    var item = newItem(title, notes, now);
+    if (opts && opts.next) s.queue.unshift(item);
+    else s.queue.push(item);
+    return item;
+  }
+
+  /* Creates a task and focuses it at once. Whatever was current becomes up
+     next, so nothing is lost. */
+  function addAndStart(s, title, notes, now) {
+    if (!cleanTitle(title)) return null;
+    var item = newItem(title, notes, now);
+    var previous = suspend(s, now, 'front');
+    focus(s, item, now);
+    return { item: item, previous: previous };
+  }
+
+  function edit(s, id, fields) {
+    var loc = find(s, id);
+    if (!loc) return null;
+    var item = loc.item, changed = false;
+    if (fields.title !== undefined) {
+      var t = cleanTitle(fields.title);
+      if (t && t !== item.title) { item.title = t; changed = true; }
+    }
+    if (fields.notes !== undefined) {
+      var n = cleanNotes(fields.notes);
+      if (n !== (item.notes || '')) { item.notes = n; changed = true; }
+    }
+    return changed ? item : null;
+  }
+
+  /* ----------------------------------------------------------- focusing */
+
+  /* Brings a queued or background task into focus. The task that was in
+     focus goes back to the front of the queue. */
+  function start(s, id, now) {
+    var loc = find(s, id);
+    if (!loc || loc.list === 'current' || loc.list === 'done') return null;
+    detach(s, loc);
+    bankBackground(loc.item, now);
+    var previous = suspend(s, now, 'front');
+    focus(s, loc.item, now);
+    return { item: loc.item, from: loc.list, previous: previous };
+  }
+
+  function finish(s, id, now) {
+    var loc = find(s, id);
+    if (!loc || (loc.list !== 'current' && loc.list !== 'background')) return null;
+    detach(s, loc);
+    var item = loc.item;
+    bankFocus(item, now);
+    bankBackground(item, now);
+    if (!item.started) item.started = U.iso(now);
+    item.finished = U.iso(now);
+    s.done.unshift(item);
+    return item;
+  }
+
+  /* "Move on": the current task is done and up next comes into focus. */
+  function finishAndNext(s, now) {
+    if (!s.current) return null;
+    var done = finish(s, s.current.id, now);
+    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
+    return { done: done, next: next };
+  }
+
+  /* The current task carries on without you; up next comes into focus. */
+  function toBackground(s, now) {
+    var c = s.current;
+    if (!c) return null;
+    bankFocus(c, now);
+    c.backgroundSince = U.iso(now);
+    s.background.push(c);
+    s.current = null;
+    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
+    return { sent: c, next: next };
+  }
+
+  /* Out of focus, back to the queue; nothing else is started. */
+  function pause(s, now, where) {
+    return suspend(s, now, where === 'end' ? 'end' : 'front');
+  }
+
+  function swapWithNext(s, now) {
+    if (!s.current || !s.queue.length) return null;
+    return start(s, s.queue[0].id, now);
+  }
+
+  /* A background task whose machine has finished but which you will deal
+     with later goes back to the queue as up next. */
+  function backgroundToQueue(s, id, now) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'background') return null;
+    detach(s, loc);
+    bankBackground(loc.item, now);
+    s.queue.unshift(loc.item);
+    return loc.item;
+  }
+
+  /* -------------------------------------------------------------- order */
+
+  function move(s, id, index) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'queue') return null;
+    var to = Math.max(0, Math.min(index, s.queue.length - 1));
+    if (to === loc.index) return null;
+    s.queue.splice(loc.index, 1);
+    s.queue.splice(to, 0, loc.item);
+    return loc.item;
+  }
+
+  function makeNext(s, id) {
+    return move(s, id, 0);
+  }
+
+  /* Drop into the "later" list, just before `beforeId` (or at the end when
+     it is null). A task dropped there never lands in the up-next slot unless
+     it is the only one queued. */
+  function moveToLater(s, id, beforeId) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'queue') return null;
+    var rest = s.queue.filter(function (x) { return x.id !== id; });
+    var at = rest.length;
+    if (beforeId) {
+      for (var k = 0; k < rest.length; k++) if (rest[k].id === beforeId) { at = k; break; }
+    }
+    at = Math.max(at, Math.min(1, rest.length));
+    if (at === loc.index) return null;
+    rest.splice(at, 0, loc.item);
+    s.queue = rest;
+    return loc.item;
+  }
+
+  /* ---------------------------------------------------------- removing */
+
+  function remove(s, id) {
+    var loc = find(s, id);
+    if (!loc) return null;
+    detach(s, loc);
+    return loc.item;
+  }
+
+  function restore(s, id) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'done') return null;
+    detach(s, loc);
+    delete loc.item.finished;
+    s.queue.push(loc.item);
+    return loc.item;
+  }
+
+  function clearDone(s) {
+    var n = s.done.length;
+    if (!n) return null;
+    s.done = [];
+    return n;
+  }
+
+  /* ------------------------------------------------------------- times */
+
+  function elapsed(item, now) {
+    return item.started ? U.secondsSince(item.started, now) : 0;
+  }
+
+  function stretch(item, now) {
+    return item.focusedSince ? U.secondsSince(item.focusedSince, now) : 0;
+  }
+
+  function focusTotal(item, now) {
+    return (item.focusSeconds || 0) + stretch(item, now);
+  }
+
+  function backgroundStretch(item, now) {
+    return item.backgroundSince ? U.secondsSince(item.backgroundSince, now) : 0;
+  }
+
+  function backgroundTotal(item, now) {
+    return (item.backgroundSeconds || 0) + backgroundStretch(item, now);
+  }
+
+  /* Wall-clock time from first start to finish, for done tasks. */
+  function span(item) {
+    var a = U.ms(item.started), b = U.ms(item.finished);
+    return a !== null && b !== null ? Math.max(0, Math.floor((b - a) / 1000)) : 0;
+  }
+
+  function idle(s, now) {
+    return U.secondsSince(s.lastInteraction, now);
+  }
+
+  function upNext(s) {
+    return s.queue[0] || null;
+  }
+
+  return {
+    newState: newState, newItem: newItem, find: find,
+    add: add, addAndStart: addAndStart, edit: edit,
+    start: start, finish: finish, finishAndNext: finishAndNext,
+    toBackground: toBackground, pause: pause, swapWithNext: swapWithNext,
+    backgroundToQueue: backgroundToQueue,
+    move: move, makeNext: makeNext, moveToLater: moveToLater,
+    remove: remove, restore: restore, clearDone: clearDone,
+    elapsed: elapsed, stretch: stretch, focusTotal: focusTotal,
+    backgroundStretch: backgroundStretch, backgroundTotal: backgroundTotal,
+    span: span, idle: idle, upNext: upNext
+  };
+})();
+/* ---------- src/js/25-store.js ---------- */
+/* ==========================================================================
+   25-store.js — the one live state, its persistence and its undo history.
+
+   Every change goes through commit(label, fn): the state is cloned, `fn`
+   mutates the clone using QDF.model, and if it reports a change the clone
+   becomes the state, the previous one goes on the undo stack, the time of
+   last interaction is stamped, and the result is saved and announced.
+   States are never mutated in place, so undo is just swapping one back.
+
+   The undo history lives in memory only; reloading the page clears it.
+   ========================================================================== */
+
+QDF.store = (function () {
+  var U = QDF.util;
+
+  var state = null;
+  var history = [];
+  var listeners = [];
+  var info = { savedAt: null, error: null, notice: null };
+  var now = function () { return Date.now(); };
+  var backend = null;
+
+  function storage() {
+    if (backend) return backend;
+    try { return window.localStorage; } catch (e) { return null; }
+  }
+
+  function clone(s) {
+    return JSON.parse(JSON.stringify(s));
+  }
+
+  function emit(event) {
+    listeners.slice().forEach(function (fn) { fn(event); });
+  }
+
+  function save() {
+    var ls = storage();
+    if (!ls) {
+      info.error = 'This browser is not letting the page keep data. Export to keep a copy.';
+      return false;
+    }
+    try {
+      ls.setItem(QDF.APP.storageKey, JSON.stringify(QDF.serialize.toDoc(state, now())));
+      info.savedAt = now();
+      info.error = null;
+      return true;
+    } catch (e) {
+      info.error = 'Could not save in this browser (' + (e && e.message || e) + '). Export to keep a copy.';
+      return false;
+    }
+  }
+
+  function readSaved() {
+    var ls = storage(), raw = null;
+    if (!ls) {
+      info.error = 'This browser is not letting the page keep data. Export to keep a copy.';
+      return null;
+    }
+    try { raw = ls.getItem(QDF.APP.storageKey); } catch (e) { raw = null; }
+    if (!raw) return null;
+    try {
+      return QDF.serialize.fromDoc(JSON.parse(raw), now());
+    } catch (e) {
+      /* Keep the unreadable copy rather than overwrite it on the next save. */
+      try { ls.setItem(QDF.APP.storageKey + '.unreadable', raw); } catch (e2) { /* ignore */ }
+      info.notice = 'The saved session could not be read, so a fresh one was started. ' +
+        'The old data was kept under "' + QDF.APP.storageKey + '.unreadable".';
+      return null;
+    }
+  }
+
+  function load() {
+    state = readSaved() || QDF.model.newState(now());
+    history = [];
+    return state;
+  }
+
+  function get() {
+    return state;
+  }
+
+  function push(label) {
+    history.push({ label: label, state: state });
+    if (history.length > QDF.APP.undoDepth) history.shift();
+  }
+
+  /* Returns whatever `fn` returned, or null when nothing changed. */
+  function commit(label, fn) {
+    var t = now();
+    var next = clone(state);
+    var result = fn(next, t);
+    if (result === null || result === undefined || result === false) return null;
+    push(label);
+    next.lastInteraction = U.iso(t);
+    state = next;
+    save();
+    emit({ type: 'commit', label: label, result: result });
+    return result;
+  }
+
+  /* "I'm still on it": counts as an interaction without changing anything
+     worth undoing. */
+  function touch() {
+    var next = clone(state);
+    next.lastInteraction = U.iso(now());
+    state = next;
+    save();
+    emit({ type: 'touch' });
+  }
+
+  function undo() {
+    var entry = history.pop();
+    if (!entry) return null;
+    var restored = clone(entry.state);
+    restored.lastInteraction = U.iso(now());
+    state = restored;
+    save();
+    emit({ type: 'undo', label: entry.label });
+    return entry.label;
+  }
+
+  function replace(newState, label) {
+    push(label);
+    var next = clone(newState);
+    next.lastInteraction = U.iso(now());
+    state = next;
+    save();
+    emit({ type: 'replace', label: label });
+    return state;
+  }
+
+  /* Another tab saved. Its version wins; our undo history would only
+     overwrite it, so it is dropped. */
+  function reloadFromStorage() {
+    var s = readSaved();
+    if (!s) return false;
+    state = s;
+    history = [];
+    emit({ type: 'external' });
+    return true;
+  }
+
+  function undoLabel() {
+    return history.length ? history[history.length - 1].label : null;
+  }
+
+  function onChange(fn) {
+    listeners.push(fn);
+  }
+
+  function takeNotice() {
+    var n = info.notice;
+    info.notice = null;
+    return n;
+  }
+
+  /* For the test harnesses. */
+  function configure(opts) {
+    if (opts.now) now = opts.now;
+    if (opts.storage) backend = opts.storage;
+    if (opts.reset) { listeners = []; history = []; state = null; info = { savedAt: null, error: null, notice: null }; }
+  }
+
+  return {
+    load: load, get: get, commit: commit, touch: touch, undo: undo, replace: replace,
+    reloadFromStorage: reloadFromStorage, undoLabel: undoLabel, onChange: onChange,
+    info: function () { return info; }, takeNotice: takeNotice,
+    now: function () { return now(); },
+    configure: configure
+  };
+})();
+/* ---------- src/js/30-serialize.js ---------- */
+/* ==========================================================================
+   30-serialize.js — state ⇄ document ⇄ YAML.
+
+   The document is the state with snake_case keys and nothing derived, in a
+   fixed key order, so exporting the same state twice gives the same bytes.
+   The same document (as JSON) is what is kept in localStorage, so loading a
+   saved session and importing a file go through one validation path.
+
+   Import is forgiving about hand edits: missing ids are generated, duplicate
+   ids are renamed, a bare string in a list becomes a task with that title,
+   missing or unreadable times are filled in, and fields that do not belong
+   where a task sits (a `finished` time on a queued task, say) are dropped.
+   paperwork/STATE-FORMAT.md is the full description.
+   ========================================================================== */
+
+QDF.serialize = (function () {
+  var U = QDF.util;
+
+  /* [property, yaml key, kind] in document order. */
+  var FIELDS = [
+    ['id', 'id', 'text'],
+    ['title', 'title', 'text'],
+    ['notes', 'notes', 'text'],
+    ['created', 'created', 'time'],
+    ['started', 'started', 'time'],
+    ['focusedSince', 'focused_since', 'time'],
+    ['backgroundSince', 'background_since', 'time'],
+    ['finished', 'finished', 'time'],
+    ['focusSeconds', 'focus_seconds', 'seconds'],
+    ['backgroundSeconds', 'background_seconds', 'seconds']
+  ];
+
+  /* Which live-stretch field a task may carry, by where it sits. */
+  var OWN = {
+    current: 'focusedSince',
+    background: 'backgroundSince',
+    done: 'finished',
+    queue: null
+  };
+
+  function itemToDoc(item) {
+    var o = {};
+    FIELDS.forEach(function (f) {
+      var v = item[f[0]];
+      if (v === undefined || v === null || v === '') return;
+      if (f[2] === 'seconds' && !v) return;
+      o[f[1]] = v;
+    });
+    return o;
+  }
+
+  function toDoc(s, now) {
+    return {
+      format: QDF.APP.format,
+      saved: U.iso(now),
+      created: s.created,
+      last_interaction: s.lastInteraction,
+      current: s.current ? itemToDoc(s.current) : null,
+      queue: s.queue.map(itemToDoc),
+      background: s.background.map(itemToDoc),
+      done: s.done.map(itemToDoc)
+    };
+  }
+
+  var HEADER =
+    '# ' + QDF.APP.name + ' state\n' +
+    '# queue: the first entry is up next. Times are ISO 8601 (UTC);\n' +
+    '# *_seconds hold time banked from earlier stretches.\n';
+
+  function toYaml(s, now) {
+    return HEADER + QDF.yaml.emit(toDoc(s, now), true);
+  }
+
+  /* ------------------------------------------------------------- import */
+
+  function isMap(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  function itemFromDoc(raw, where, now, seen, warnings, position) {
+    if (typeof raw === 'string' || typeof raw === 'number') raw = { title: String(raw) };
+    if (!isMap(raw)) {
+      warnings.push('Skipped an entry in ' + position + ' that is not a task.');
+      return null;
+    }
+    var item = {};
+    FIELDS.forEach(function (f) {
+      var v = raw[f[1]];
+      if (v === undefined || v === null) return;
+      if (f[2] === 'text') {
+        if (typeof v === 'object') return;
+        item[f[0]] = String(v);
+      } else if (f[2] === 'time') {
+        if (v instanceof Date) v = v.toISOString();
+        if (U.isTime(String(v))) item[f[0]] = new Date(U.ms(String(v))).toISOString();
+        else warnings.push('Ignored an unreadable ' + f[1] + ' time in ' + position + '.');
+      } else {
+        var n = Number(v);
+        if (isFinite(n) && n > 0) item[f[0]] = Math.round(n);
+      }
+    });
+
+    item.title = String(item.title || '').replace(/\s+/g, ' ').trim() || 'Untitled task';
+    item.notes = String(item.notes || '').replace(/\r\n?/g, '\n').replace(/\s+$/, '');
+    item.focusSeconds = item.focusSeconds || 0;
+    item.backgroundSeconds = item.backgroundSeconds || 0;
+    if (!item.created) item.created = item.started || U.iso(now);
+
+    if (!item.id || !/^[\w.:-]{1,80}$/.test(item.id)) item.id = U.uid(now);
+    while (seen[item.id]) item.id = U.uid(now) + '-' + Object.keys(seen).length;
+    seen[item.id] = true;
+
+    /* Only the field that belongs to this position survives. */
+    ['focusedSince', 'backgroundSince', 'finished'].forEach(function (k) {
+      if (k !== OWN[where]) delete item[k];
+    });
+    if (where === 'current') {
+      if (!item.focusedSince) item.focusedSince = U.iso(now);
+      if (!item.started) item.started = item.focusedSince;
+    } else if (where === 'background') {
+      if (!item.backgroundSince) item.backgroundSince = U.iso(now);
+      if (!item.started) item.started = item.backgroundSince;
+    } else if (where === 'done') {
+      if (!item.finished) item.finished = U.iso(now);
+      if (!item.started) item.started = item.finished;
+    }
+    return item;
+  }
+
+  function list(doc, key, now, seen, warnings) {
+    var v = doc[key];
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v)) {
+      warnings.push('Ignored "' + key + '" because it is not a list.');
+      return [];
+    }
+    return v.map(function (raw, n) {
+      return itemFromDoc(raw, key, now, seen, warnings, key + ' #' + (n + 1));
+    }).filter(Boolean);
+  }
+
+  /* Returns { state, warnings }. Throws when the document cannot be a state
+     at all, with a message meant for the person importing it. */
+  function fromDocDetailed(doc, now) {
+    if (!isMap(doc)) {
+      throw new Error('This does not look like a ' + QDF.APP.name + ' state: expected keys such as "current" and "queue" at the top level.');
+    }
+    var format = doc.format;
+    if (format !== undefined && format !== null) {
+      var m = /^qdvc-focus\/(\d+)$/.exec(String(format));
+      if (!m) throw new Error('Unrecognised format "' + format + '"; expected ' + QDF.APP.format + '.');
+      if (Number(m[1]) > 1) throw new Error('This file was written by a newer version (' + format + ').');
+    } else if (!('current' in doc) && !('queue' in doc) && !('background' in doc) && !('done' in doc)) {
+      throw new Error('This does not look like a ' + QDF.APP.name + ' state: none of "current", "queue", "background" or "done" are present.');
+    }
+
+    var warnings = [], seen = {};
+    var s = QDF.model.newState(now);
+    if (U.isTime(String(doc.created || ''))) s.created = new Date(U.ms(String(doc.created))).toISOString();
+    if (U.isTime(String(doc.last_interaction || ''))) {
+      s.lastInteraction = new Date(U.ms(String(doc.last_interaction))).toISOString();
+    }
+
+    var cur = doc.current;
+    if (Array.isArray(cur)) {
+      warnings.push('"current" holds a list; the first entry is in focus and the rest were queued.');
+      s.current = cur.length ? itemFromDoc(cur[0], 'current', now, seen, warnings, 'current') : null;
+      s.queue = cur.slice(1).map(function (raw, n) {
+        return itemFromDoc(raw, 'queue', now, seen, warnings, 'current #' + (n + 2));
+      }).filter(Boolean);
+    } else if (cur !== undefined && cur !== null && cur !== '') {
+      s.current = itemFromDoc(cur, 'current', now, seen, warnings, 'current');
+    }
+    s.queue = s.queue.concat(list(doc, 'queue', now, seen, warnings));
+    s.background = list(doc, 'background', now, seen, warnings);
+    s.done = list(doc, 'done', now, seen, warnings);
+    return { state: s, warnings: warnings };
+  }
+
+  function fromDoc(doc, now) {
+    return fromDocDetailed(doc, now).state;
+  }
+
+  function fromYaml(text, now) {
+    if (!String(text || '').trim()) throw new Error('There is nothing to import.');
+    return fromDocDetailed(QDF.yaml.parse(text), now);
+  }
+
+  return {
+    toDoc: toDoc, toYaml: toYaml,
+    fromDoc: fromDoc, fromDocDetailed: fromDocDetailed, fromYaml: fromYaml
+  };
+})();
+/* ---------- src/js/45-icons.js ---------- */
+/* ==========================================================================
+   45-icons.js — inline SVG icons, drawn on a 20×20 grid with a 1.6 stroke.
+   QDF.icon(name) returns markup; colour comes from `currentColor`.
+   ========================================================================== */
+
+QDF.ICONS = {
+  check: '<path d="M4.5 10.5l3.5 3.5 7.5-8"/>',
+  play: '<path d="M7 4.8v10.4l8.2-5.2z" fill="currentColor" stroke-linejoin="round"/>',
+  background: '<rect x="3" y="7" width="10" height="9" rx="1.5"/><path d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5v6a1.5 1.5 0 0 1-1.5 1.5H13"/>',
+  forward: '<path d="M10 16V5M5.5 9.5L10 5l4.5 4.5"/>',
+  up: '<path d="M10 15V6M6 10l4-4 4 4M5 3.5h10"/>',
+  edit: '<path d="M12.8 4.2l3 3L7.5 15.5 4 16l.5-3.5z"/><path d="M11 6l3 3"/>',
+  trash: '<path d="M4.5 6h11M8 6V4.5h4V6M6 6l.8 10h6.4L14 6"/>',
+  plus: '<path d="M10 4.5v11M4.5 10h11"/>',
+  undo: '<path d="M7.5 5L4 8.5 7.5 12"/><path d="M4.5 8.5h7a4 4 0 0 1 0 8H9"/>',
+  code: '<path d="M7 6l-4 4 4 4M13 6l4 4-4 4M11 4.5l-2 11"/>',
+  importFile: '<path d="M10 3.5v9M6.5 9l3.5 3.5L13.5 9"/><path d="M4 13.5v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/>',
+  exportFile: '<path d="M10 12.5v-9M6.5 7L10 3.5 13.5 7"/><path d="M4 13.5v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/>',
+  info: '<circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 6.3v.2"/>',
+  more: '<circle cx="5" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/>',
+  restore: '<path d="M4 10a6 6 0 1 0 1.8-4.3"/><path d="M4 4v3.5h3.5"/>',
+  close: '<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>',
+  chevron: '<path d="M7 8l3 3 3-3"/>',
+  swap: '<path d="M5 7h10M12 4l3 3-3 3M15 13H5M8 10l-3 3 3 3"/>',
+  pause: '<path d="M7.5 5v10M12.5 5v10"/>',
+  queueEnd: '<path d="M4 5h12M4 9h12M4 13h6M14 12v5M11.5 14.5L14 17l2.5-2.5"/>',
+  copy: '<rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-6A1.5 1.5 0 0 0 4 5.5v6A1.5 1.5 0 0 0 5.5 13H7"/>',
+  clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.5V10l2.5 1.5"/>',
+  hand: '<path d="M7 10V5.5a1.2 1.2 0 0 1 2.4 0V9M9.4 9V4.5a1.2 1.2 0 0 1 2.4 0V9M11.8 9V5.5a1.2 1.2 0 0 1 2.4 0V11c0 3-2 5-4.7 5-2 0-3.2-1-4.3-2.6L3.6 11a1.2 1.2 0 0 1 2-1.3L7 11.5"/>'
+};
+
+QDF.icon = function (name, cls) {
+  var body = QDF.ICONS[name] || '';
+  return '<svg class="icon' + (cls ? ' ' + cls : '') + '" viewBox="0 0 20 20" width="16" height="16" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true" focusable="false">' + body + '</svg>';
+};
+/* ---------- src/js/50-ui.js ---------- */
+/* ==========================================================================
+   50-ui.js — the UI kit: dialogs, pop-up menus and toasts.
+   Knows nothing about tasks; views and the controller call into it.
+   ========================================================================== */
+
+QDF.ui = (function () {
+  var U = QDF.util;
+  var dialog = null;     /* { root, opts, restoreFocus } */
+  var menu = null;       /* { root, anchor } */
+  var seq = 0;
+
+  function layer() {
+    return document.getElementById('layer');
+  }
+
+  /* ------------------------------------------------------------ dialogs */
+
+  /* opts: { title, body (html), wide, className,
+             buttons: [{ label, primary, danger, id, align: 'left', onClick(root) }],
+             onOpen(root), onClose() }
+     A button's onClick returning false keeps the dialog open. A button
+     with no onClick just closes. */
+  function openDialog(opts) {
+    closeMenu();
+    closeDialog(true);
+    clearToasts();
+    var id = 'dlg-' + (++seq);
+    var root = document.createElement('div');
+    root.className = 'backdrop';
+    var buttons = (opts.buttons || []).map(function (b, n) {
+      return '<button type="button" class="btn' + (b.primary ? ' btn-primary' : '') +
+        (b.danger ? ' btn-danger' : '') + (b.align === 'left' ? ' push-left' : '') + '"' +
+        (b.id ? ' id="' + U.esc(b.id) + '"' : '') + ' data-dialog-button="' + n + '"' +
+        (b.disabled ? ' disabled' : '') + '>' +
+        (b.icon ? QDF.icon(b.icon) : '') + '<span>' + U.esc(b.label) + '</span></button>';
+    }).join('');
+    root.innerHTML =
+      '<div class="dialog' + (opts.wide ? ' dialog-wide' : '') + (opts.className ? ' ' + opts.className : '') +
+        '" role="dialog" aria-modal="true" aria-labelledby="' + id + '">' +
+        '<div class="dialog-titlebar">' +
+          '<div class="dialog-title" id="' + id + '">' + U.esc(opts.title) + '</div>' +
+          '<button type="button" class="titlebar-close" data-dialog-close aria-label="Close">' + QDF.icon('close') + '</button>' +
+        '</div>' +
+        '<div class="dialog-body">' + (opts.body || '') + '</div>' +
+        (buttons ? '<div class="dialog-foot">' + buttons + '</div>' : '') +
+      '</div>';
+    layer().appendChild(root);
+
+    dialog = { root: root, opts: opts, restoreFocus: document.activeElement };
+
+    root.addEventListener('click', function (e) {
+      if (e.target.closest('[data-dialog-close]')) { closeDialog(); return; }
+      var btn = e.target.closest('[data-dialog-button]');
+      if (!btn || btn.disabled) return;
+      var spec = opts.buttons[Number(btn.getAttribute('data-dialog-button'))];
+      if (spec.onClick && spec.onClick(root) === false) return;
+      closeDialog();
+    });
+
+    if (opts.onOpen) opts.onOpen(root);
+    var focusable = root.querySelector('[autofocus]') ||
+      root.querySelector('input, textarea, select') ||
+      root.querySelector('.dialog-foot .btn-primary') ||
+      root.querySelector('.dialog-foot .btn');
+    if (focusable) focusable.focus();
+    return root;
+  }
+
+  function closeDialog(silently) {
+    if (!dialog) return;
+    var d = dialog;
+    dialog = null;
+    if (d.root.parentNode) d.root.parentNode.removeChild(d.root);
+    if (d.opts.onClose && !silently) d.opts.onClose();
+    if (d.restoreFocus && d.restoreFocus.focus && document.body.contains(d.restoreFocus)) {
+      d.restoreFocus.focus();
+    }
+  }
+
+  /* opts: { title, message (html), confirm, danger } */
+  function confirm(opts, onYes) {
+    return openDialog({
+      title: opts.title,
+      body: '<div class="dialog-message">' + opts.message + '</div>',
+      buttons: [
+        { label: 'Cancel' },
+        { label: opts.confirm || 'OK', primary: !opts.danger, danger: !!opts.danger, onClick: function () { onYes(); } }
+      ]
+    });
+  }
+
+  /* -------------------------------------------------------------- menus */
+
+  /* items: [{ label, icon, onSelect, danger, disabled, hint } | 'separator'] */
+  function openMenu(anchor, items) {
+    var reopen = !menu || menu.anchor !== anchor;
+    closeMenu();
+    if (!reopen) return;
+    var root = document.createElement('div');
+    root.className = 'menu';
+    root.setAttribute('role', 'menu');
+    root.innerHTML = items.map(function (it, n) {
+      if (it === 'separator') return '<div class="menu-sep" role="separator"></div>';
+      return '<button type="button" class="menu-item' + (it.danger ? ' is-danger' : '') + '" role="menuitem" data-menu-item="' + n + '"' +
+        (it.disabled ? ' disabled' : '') + '>' +
+        '<span class="menu-icon">' + (it.icon ? QDF.icon(it.icon) : '') + '</span>' +
+        '<span class="menu-label">' + U.esc(it.label) + '</span>' +
+        (it.hint ? '<span class="menu-hint">' + U.esc(it.hint) + '</span>' : '') +
+      '</button>';
+    }).join('');
+    layer().appendChild(root);
+    anchor.classList.add('is-open');
+    anchor.setAttribute('aria-expanded', 'true');
+
+    var a = anchor.getBoundingClientRect();
+    var w = root.offsetWidth, h = root.offsetHeight;
+    var left = Math.min(Math.max(8, a.right - w), window.innerWidth - w - 8);
+    var top = a.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, a.top - h - 6);
+    root.style.left = left + 'px';
+    root.style.top = top + 'px';
+
+    root.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-menu-item]');
+      if (!btn || btn.disabled) return;
+      var it = items[Number(btn.getAttribute('data-menu-item'))];
+      closeMenu();
+      if (it.onSelect) it.onSelect();
+    });
+    menu = { root: root, anchor: anchor };
+    var first = root.querySelector('.menu-item:not([disabled])');
+    if (first) first.focus();
+  }
+
+  function closeMenu() {
+    if (!menu) return;
+    var m = menu;
+    menu = null;
+    if (m.root.parentNode) m.root.parentNode.removeChild(m.root);
+    m.anchor.classList.remove('is-open');
+    m.anchor.setAttribute('aria-expanded', 'false');
+  }
+
+  function menuKey(e) {
+    var items = Array.prototype.slice.call(menu.root.querySelectorAll('.menu-item:not([disabled])'));
+    var at = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { items[(at + 1) % items.length].focus(); return true; }
+    if (e.key === 'ArrowUp') { items[(at - 1 + items.length) % items.length].focus(); return true; }
+    if (e.key === 'Tab') { closeMenu(); return false; }
+    return false;
+  }
+
+  /* ------------------------------------------------------------- toasts */
+
+  /* opts: { undo: true, timeout: ms, tone: 'error' } */
+  function toast(message, opts) {
+    opts = opts || {};
+    var host = document.getElementById('toasts');
+    var el = document.createElement('div');
+    el.className = 'toast' + (opts.tone ? ' toast-' + opts.tone : '');
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast-text">' + U.esc(message) + '</span>' +
+      (opts.undo ? '<button type="button" class="toast-btn" data-toast-undo>' + QDF.icon('undo') + '<span>Undo</span></button>' : '') +
+      '<button type="button" class="toast-x" data-toast-close aria-label="Dismiss">' + QDF.icon('close') + '</button>';
+    /* One at a time: an older toast's Undo would undo the newer change. */
+    host.innerHTML = '';
+    host.appendChild(el);
+    var timer = setTimeout(dismiss, opts.timeout || (opts.undo ? 7000 : 3500));
+    function dismiss() {
+      clearTimeout(timer);
+      if (!el.parentNode) return;
+      el.classList.add('is-leaving');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 180);
+    }
+    el.addEventListener('click', function (e) {
+      if (e.target.closest('[data-toast-undo]')) { dismiss(); QDF.app.undo(); }
+      else if (e.target.closest('[data-toast-close]')) dismiss();
+    });
+    return dismiss;
+  }
+
+  function clearToasts() {
+    var host = document.getElementById('toasts');
+    if (host) host.innerHTML = '';
+  }
+
+  /* ----------------------------------------------------- global plumbing */
+
+  function isOpen() {
+    return !!(dialog || menu);
+  }
+
+  /* Called first by the keyboard handler; returns true when it used the key. */
+  function handleKey(e) {
+    if (menu) {
+      if (e.key === 'Escape') { var a = menu.anchor; closeMenu(); a.focus(); e.preventDefault(); return true; }
+      if (menuKey(e)) { e.preventDefault(); return true; }
+      return false;
+    }
+    if (dialog) {
+      if (e.key === 'Escape') { closeDialog(); e.preventDefault(); return true; }
+      if (e.key === 'Tab') return trapTab(e);
+    }
+    return false;
+  }
+
+  function trapTab(e) {
+    var nodes = Array.prototype.slice.call(dialog.root.querySelectorAll(
+      'button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])'));
+    if (!nodes.length) return false;
+    var first = nodes[0], last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); return true; }
+    if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); return true; }
+    return false;
+  }
+
+  function onDocumentPointer(e) {
+    if (menu && !menu.root.contains(e.target) && !menu.anchor.contains(e.target)) closeMenu();
+  }
+
+  return {
+    dialog: openDialog, closeDialog: closeDialog, confirm: confirm,
+    menu: openMenu, closeMenu: closeMenu,
+    toast: toast, clearToasts: clearToasts,
+    isOpen: isOpen, isDialogOpen: function () { return !!dialog; },
+    handleKey: handleKey, onDocumentPointer: onDocumentPointer
+  };
+})();
+/* ---------- src/js/55-chrome.js ---------- */
+/* ==========================================================================
+   55-chrome.js — views for the window chrome: the "since last update"
+   indicator in the toolbar and the status bar.
+
+   Views are pure: (state, now) → HTML string. Anything that changes every
+   second is marked with data-tick so the controller can refresh the text
+   without re-rendering (which would interrupt a drag in progress):
+
+     data-tick="clock|dur|durp|ago"   format, see QDF.view.format
+     data-from="<ISO time>"           counting up from this time
+     data-base="<seconds>"            added on top (banked time)
+   ========================================================================== */
+
+QDF.view.tick = function (fmt, fromIso, base, nowMs) {
+  var U = QDF.util;
+  var sec = (base || 0) + (fromIso ? U.secondsSince(fromIso, nowMs) : 0);
+  return '<span data-tick="' + fmt + '"' + (fromIso ? ' data-from="' + U.esc(fromIso) + '"' : '') +
+    (base ? ' data-base="' + Math.floor(base) + '"' : '') + '>' + U.esc(QDF.view.format(fmt, sec)) + '</span>';
+};
+
+QDF.view.format = function (fmt, sec) {
+  var U = QDF.util;
+  if (fmt === 'clock') return U.clock(sec);
+  if (fmt === 'durp') return U.duration(sec, true);
+  if (fmt === 'ago') return U.ago(sec);
+  return U.duration(sec);
+};
+
+QDF.view.idleLevel = function (sec) {
+  if (sec >= QDF.IDLE.alertAfter * 60) return 'alert';
+  if (sec >= QDF.IDLE.warnAfter * 60) return 'warn';
+  return 'ok';
+};
+
+QDF.view.idle = function (s, now) {
+  var sec = QDF.model.idle(s, now);
+  return '<button type="button" class="idle-chip" id="idle-chip" data-act="check-in" data-level="' +
+      QDF.view.idleLevel(sec) + '" title="Time since you last changed anything here. Click to check in without changing anything.">' +
+    '<span class="idle-lamp" aria-hidden="true"></span>' +
+    '<span class="idle-text">' +
+      '<span class="idle-label">Since last update</span>' +
+      '<span class="idle-value">' + QDF.view.tick('durp', s.lastInteraction, 0, now) + '</span>' +
+    '</span>' +
+  '</button>';
+};
+
+QDF.view.status = function (s, now, info) {
+  var U = QDF.util;
+  var doneToday = s.done.filter(function (d) { return U.dayKey(d.finished) === U.dayKey(U.iso(now)); }).length;
+  var saved = info.error
+    ? '<span class="status-item is-error">' + U.esc(info.error) + '</span>'
+    : '<span class="status-item">' + (info.savedAt
+        ? 'Saved in this browser at ' + U.esc(U.timeOfDay(U.iso(info.savedAt)))
+        : 'Saved in this browser') + '</span>';
+  return saved +
+    '<span class="status-spacer"></span>' +
+    '<span class="status-item">' + U.plural(s.queue.length, 'queued', 'queued') + '</span>' +
+    '<span class="status-sep"></span>' +
+    '<span class="status-item">' + s.background.length + ' in background</span>' +
+    '<span class="status-sep"></span>' +
+    '<span class="status-item">' + doneToday + ' done today</span>' +
+    '<span class="status-sep"></span>' +
+    '<span class="status-item status-version">' + U.esc(QDF.APP.name) + ' ' + U.esc(QDF.APP.version) + '</span>';
+};
+/* ---------- src/js/60-now.js ---------- */
+/* ==========================================================================
+   60-now.js — the "Now" panel: what is in focus, how long since it started,
+   and the controls for moving on.
+   ========================================================================== */
+
+QDF.view.now = function (s, now) {
+  var U = QDF.util, M = QDF.model, I = QDF.icon, T = QDF.view.tick;
+  var c = s.current, next = M.upNext(s);
+
+  if (!c) return QDF.view.nowEmpty(s, now, next);
+
+  var id = U.esc(c.id);
+  var bg = c.backgroundSeconds || 0;
+  var stats =
+    '<div class="stat"><span class="stat-label">This stretch</span><span class="stat-value">' +
+      T('durp', c.focusedSince, 0, now) + '</span></div>' +
+    '<div class="stat"><span class="stat-label">Focused in total</span><span class="stat-value">' +
+      T('dur', c.focusedSince, c.focusSeconds || 0, now) + '</span></div>' +
+    (bg ? '<div class="stat"><span class="stat-label">In background</span><span class="stat-value">' +
+      U.esc(U.duration(bg)) + '</span></div>' : '');
+
+  return '' +
+    '<div class="now-card" data-drop="now">' +
+      '<div class="now-main">' +
+        '<div class="eyebrow"><span class="live-lamp" aria-hidden="true"></span>Working on now</div>' +
+        '<div class="now-title" data-dbl-edit="' + id + '" title="Double-click to edit">' + U.esc(c.title) + '</div>' +
+        (c.notes
+          ? '<div class="now-notes" data-dbl-edit="' + id + '">' + U.esc(c.notes) + '</div>'
+          : '<button type="button" class="link-btn" data-act="edit" data-id="' + id + '">Add notes</button>') +
+        '<div class="now-actions">' +
+          '<button type="button" class="btn btn-go btn-lg" data-act="done-next" id="btn-done-next">' + I('check') +
+            '<span>' + (next ? 'Done, start next' : 'Done') + '</span></button>' +
+          '<button type="button" class="btn btn-lg" data-act="to-background" title="It carries on without you (a build, a render, an upload). ' +
+            (next ? 'Up next comes into focus.' : '') + '">' + I('background') + '<span>Send to background</span></button>' +
+          '<button type="button" class="btn btn-lg btn-icon" data-act="now-menu" aria-haspopup="menu" aria-expanded="false" aria-label="More actions" title="More actions">' +
+            I('more') + '</button>' +
+        '</div>' +
+        '<div class="now-next">' + (next
+          ? '<span class="dim">Then:</span> ' + U.esc(next.title)
+          : '<span class="dim">Nothing queued after this.</span>') + '</div>' +
+      '</div>' +
+      '<div class="now-side">' +
+        '<div class="clock-face">' +
+          '<div class="clock-label">Since started</div>' +
+          '<div class="clock-digits">' + T('clock', c.started, 0, now) + '</div>' +
+          '<div class="clock-sub">Started at ' + U.esc(U.timeOfDay(c.started)) +
+            (U.dayKey(c.started) !== U.dayKey(U.iso(now)) ? ', ' + U.esc(U.dayLabel(c.started, now)) : '') + '</div>' +
+        '</div>' +
+        '<div class="now-stats">' + stats + '</div>' +
+      '</div>' +
+      '<div class="drop-hint" aria-hidden="true">Drop to start now</div>' +
+    '</div>';
+};
+
+QDF.view.nowEmpty = function (s, now, next) {
+  var U = QDF.util, I = QDF.icon;
+  var lead = next
+    ? '<p class="now-empty-text">Up next is <b>' + U.esc(next.title) + '</b>.</p>' +
+      '<div class="now-actions">' +
+        '<button type="button" class="btn btn-go btn-lg" data-act="start" data-id="' + U.esc(next.id) + '">' + I('play') +
+        '<span>Start it</span></button>' +
+      '</div>' +
+      '<div class="or-rule"><span>or start something else</span></div>'
+    : '<p class="now-empty-text">What are you working on?</p>';
+  return '' +
+    '<div class="now-card is-empty" data-drop="now">' +
+      '<div class="now-main">' +
+        '<div class="eyebrow"><span class="live-lamp is-off" aria-hidden="true"></span>Working on now</div>' +
+        '<div class="now-title is-placeholder">Nothing in focus</div>' +
+        lead +
+        '<form class="quick-start" data-form="quick-start" autocomplete="off">' +
+          '<input class="field" id="quick-start-input" name="title" maxlength="300" placeholder="Type a task and press Enter to start it" aria-label="Start a new task">' +
+          '<button type="submit" class="btn">' + I('play') + '<span>Start</span></button>' +
+        '</form>' +
+      '</div>' +
+      '<div class="now-side">' +
+        '<div class="clock-face is-off">' +
+          '<div class="clock-label">Since started</div>' +
+          '<div class="clock-digits">0:00:00</div>' +
+          '<div class="clock-sub">Not running</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="drop-hint" aria-hidden="true">Drop to start now</div>' +
+    '</div>';
+};
+/* ---------- src/js/62-queue.js ---------- */
+/* ==========================================================================
+   62-queue.js — the queue sidebar: the up-next tray and the "later" list.
+   The add form above them is static markup in 10-shell.html, so typing is
+   never interrupted by a re-render.
+
+   Cards carry data-drag-id; the tray and the list carry data-drop. The
+   controller (90-app.js) owns the drag-and-drop behaviour.
+   ========================================================================== */
+
+QDF.view.taskMeta = function (item, now) {
+  var U = QDF.util, M = QDF.model, T = QDF.view.tick;
+  var parts = [];
+  if (item.started) {
+    parts.push('Started ' + T('ago', item.started, 0, now));
+    var focus = M.focusTotal(item, now);
+    if (focus >= 60) parts.push(U.esc(U.duration(focus)) + ' focused');
+  } else {
+    parts.push('Added ' + T('ago', item.created, 0, now));
+  }
+  if (item.backgroundSeconds >= 60) parts.push(U.esc(U.duration(item.backgroundSeconds)) + ' in background');
+  return parts.join('<span class="meta-dot" aria-hidden="true"></span>');
+};
+
+QDF.view.taskCard = function (item, now, isNext) {
+  var U = QDF.util, I = QDF.icon;
+  var id = U.esc(item.id);
+  var note = U.firstLine(item.notes);
+  function tool(icon, act, label) {
+    return '<button type="button" class="tool" data-act="' + act + '" data-id="' + id + '" title="' + label +
+      '" aria-label="' + label + ': ' + U.esc(item.title) + '">' + I(icon) + '</button>';
+  }
+  return '' +
+    '<div class="task-card' + (isNext ? ' is-next' : '') + '" draggable="true" data-drag-id="' + id + '" data-dbl-edit="' + id + '">' +
+      '<span class="grip" aria-hidden="true"></span>' +
+      '<div class="task-body">' +
+        '<div class="task-title">' + U.esc(item.title) + '</div>' +
+        (note ? '<div class="task-note">' + U.esc(note) + '</div>' : '') +
+        '<div class="task-meta">' + QDF.view.taskMeta(item, now) + '</div>' +
+      '</div>' +
+      '<div class="task-tools">' +
+        tool('play', 'start', 'Start now') +
+        (isNext ? '' : tool('up', 'make-next', 'Do this next')) +
+        tool('edit', 'edit', 'Edit') +
+        tool('trash', 'remove', 'Remove') +
+      '</div>' +
+    '</div>';
+};
+
+QDF.view.queue = function (s, now) {
+  var U = QDF.util, V = QDF.view;
+  var next = s.queue[0], later = s.queue.slice(1);
+  return '' +
+    '<div class="section-label">Up next</div>' +
+    '<div class="tray" data-drop="next">' +
+      (next
+        ? V.taskCard(next, now, true)
+        : '<div class="tray-empty">' + (s.queue.length ? '' : 'Drag a task here, or add one above, to line it up next') + '</div>') +
+    '</div>' +
+    '<div class="section-label">Later' + (later.length ? ' <span class="section-count">' + later.length + '</span>' : '') + '</div>' +
+    '<ol class="later-list" data-drop="later">' +
+      (later.length
+        ? later.map(function (item) { return '<li class="later-item">' + V.taskCard(item, now, false) + '</li>'; }).join('')
+        : '<li class="list-empty">' + (next
+            ? 'Nothing else queued. Things you might get to after up next go here.'
+            : 'The queue is empty.') + '</li>') +
+    '</ol>';
+};
+/* ---------- src/js/64-background.js ---------- */
+/* ==========================================================================
+   64-background.js — the background lane: tasks something else is working
+   on (a build, a render, an upload) while you do something else.
+   ========================================================================== */
+
+QDF.view.background = function (s, now) {
+  var U = QDF.util, M = QDF.model, I = QDF.icon, T = QDF.view.tick;
+
+  var head =
+    '<div class="panel-head">' +
+      '<span class="panel-title">Running in background</span>' +
+      (s.background.length ? '<span class="count-badge">' + s.background.length + '</span>' : '') +
+      '<span class="panel-sub">Carrying on without you</span>' +
+    '</div>';
+
+  if (!s.background.length) {
+    return '<section class="panel bg-panel is-empty">' + head +
+      '<div class="panel-empty">Waiting on a build, a render or an upload? Use ' +
+      '<b>Send to background</b> and carry on with what is up next. It will wait here, timed, until you come back to it.</div>' +
+      '</section>';
+  }
+
+  var cards = s.background.map(function (item) {
+    var id = U.esc(item.id);
+    var earlier = item.backgroundSeconds || 0;
+    return '' +
+      '<div class="bg-card" data-dbl-edit="' + id + '">' +
+        '<div class="bg-top">' +
+          '<div class="bg-title">' + U.esc(item.title) + '</div>' +
+          '<button type="button" class="tool" data-act="bg-menu" data-id="' + id + '" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for ' + U.esc(item.title) + '" title="More actions">' + I('more') + '</button>' +
+        '</div>' +
+        '<div class="pole-track" aria-hidden="true"><div class="pole"></div></div>' +
+        '<div class="bg-times">' +
+          '<span class="bg-time-main">' + I('clock') + '<span>' + T('durp', item.backgroundSince, 0, now) + ' in background</span></span>' +
+          '<span class="bg-time-sub">Since ' + U.esc(U.timeOfDay(item.backgroundSince)) +
+            (earlier >= 60 ? ' · ' + U.esc(U.duration(earlier)) + ' earlier' : '') +
+            ' · ' + U.esc(U.duration(M.focusTotal(item, now))) + ' focused</span>' +
+        '</div>' +
+        '<div class="bg-actions">' +
+          '<button type="button" class="btn btn-sm" data-act="start" data-id="' + id + '" title="Bring it into focus; what you are on now becomes up next">' +
+            I('forward') + '<span>Bring forward</span></button>' +
+          '<button type="button" class="btn btn-sm btn-go" data-act="finish" data-id="' + id + '">' +
+            I('check') + '<span>Done</span></button>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+
+  return '<section class="panel bg-panel">' + head + '<div class="bg-grid">' + cards + '</div></section>';
+};
+/* ---------- src/js/66-done.js ---------- */
+/* ==========================================================================
+   66-done.js — the done log, newest first, grouped by the day it finished.
+   ========================================================================== */
+
+QDF.view.done = function (s, now, prefs) {
+  var U = QDF.util, M = QDF.model, I = QDF.icon;
+  var collapsed = !!(prefs && prefs.doneCollapsed);
+  var n = s.done.length;
+
+  var head =
+    '<div class="panel-head">' +
+      '<button type="button" class="disclosure' + (collapsed ? '' : ' is-open') + '" data-act="toggle-done" aria-expanded="' + !collapsed + '">' +
+        I('chevron') + '<span class="panel-title">Done</span></button>' +
+      (n ? '<span class="count-badge">' + n + '</span>' : '') +
+      '<span class="panel-sub">Newest first</span>' +
+      (n ? '<button type="button" class="btn btn-sm push-right" data-act="clear-done">' + I('trash') + '<span>Clear log</span></button>' : '') +
+    '</div>';
+
+  if (collapsed) return '<section class="panel done-panel is-collapsed">' + head + '</section>';
+  if (!n) {
+    return '<section class="panel done-panel">' + head +
+      '<div class="panel-empty">Finished tasks are logged here with when they started, when they finished and how much of that you spent on them.</div></section>';
+  }
+
+  var rows = [], lastDay = null, alt = false;
+  s.done.forEach(function (item) {
+    var day = U.dayKey(item.finished);
+    if (day !== lastDay) {
+      lastDay = day;
+      var count = s.done.filter(function (d) { return U.dayKey(d.finished) === day; }).length;
+      alt = false;
+      rows.push('<div class="day-row"><span>' + U.esc(U.dayLabel(item.finished, now)) + '</span><span class="day-count">' +
+        U.plural(count, 'task') + '</span></div>');
+    }
+    var id = U.esc(item.id);
+    var focus = M.focusTotal(item, now), bg = M.backgroundTotal(item, now);
+    alt = !alt;
+    rows.push(
+      '<div class="done-row' + (alt ? '' : ' is-alt') + '" data-dbl-edit="' + id + '">' +
+        '<span class="done-check" aria-hidden="true">' + I('check') + '</span>' +
+        '<span class="done-title">' + U.esc(item.title) + '</span>' +
+        '<span class="done-when">' + U.esc(U.timeOfDay(item.started)) + '–' + U.esc(U.timeOfDay(item.finished)) + '</span>' +
+        '<span class="done-took" title="From first start to finish">' + U.esc(U.duration(M.span(item))) + '</span>' +
+        '<span class="done-focus" title="Time you spent focused on it' + (bg ? '; it also ran ' + U.esc(U.duration(bg)) + ' in background' : '') + '">' +
+          U.esc(U.duration(focus)) + ' focused' + (bg >= 60 ? ' · ' + U.esc(U.duration(bg)) + ' bg' : '') + '</span>' +
+        '<span class="done-tools">' +
+          '<button type="button" class="tool" data-act="restore" data-id="' + id + '" title="Back to the queue" aria-label="Back to the queue: ' + U.esc(item.title) + '">' + I('restore') + '</button>' +
+          '<button type="button" class="tool" data-act="remove" data-id="' + id + '" title="Remove from log" aria-label="Remove from log: ' + U.esc(item.title) + '">' + I('trash') + '</button>' +
+        '</span>' +
+      '</div>');
+  });
+
+  return '<section class="panel done-panel">' + head + '<div class="done-table">' + rows.join('') + '</div></section>';
+};
+/* ---------- src/js/67-edit.js ---------- */
+/* ==========================================================================
+   67-edit.js — the task editor dialog (title and notes).
+   ========================================================================== */
+
+QDF.editor = (function () {
+  var U = QDF.util;
+
+  var WHERE = {
+    current: 'In focus',
+    queue: 'Queued',
+    background: 'Running in background',
+    done: 'Done'
+  };
+
+  function open(id) {
+    var s = QDF.store.get();
+    var loc = QDF.model.find(s, id);
+    if (!loc) return;
+    var item = loc.item, now = QDF.store.now();
+    var facts = [WHERE[loc.list] + (loc.list === 'queue' && loc.index === 0 ? ' (up next)' : '')];
+    facts.push('added ' + U.ago(U.secondsSince(item.created, now)));
+    if (item.started) facts.push('first started ' + U.ago(U.secondsSince(item.started, now)));
+
+    function save(root) {
+      var title = root.querySelector('#edit-title').value;
+      if (!title.trim()) {
+        root.querySelector('#edit-title').focus();
+        root.querySelector('.field-error').textContent = 'A task needs a title.';
+        return false;
+      }
+      QDF.app.commit('Edit task', function (st) {
+        return QDF.model.edit(st, id, { title: title, notes: root.querySelector('#edit-notes').value });
+      });
+      return true;
+    }
+
+    QDF.ui.dialog({
+      title: 'Edit task',
+      body:
+        '<label class="form-label" for="edit-title">Title</label>' +
+        '<input class="field field-lg" id="edit-title" maxlength="300" value="' + U.esc(item.title) + '" autocomplete="off">' +
+        '<div class="field-error" role="alert"></div>' +
+        '<label class="form-label" for="edit-notes">Notes</label>' +
+        '<textarea class="field field-area" id="edit-notes" rows="7" placeholder="Links, commands, where you left off…">' + U.esc(item.notes || '') + '</textarea>' +
+        '<div class="form-foot-note">' + U.esc(facts.join(' · ')) + '. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves.</div>',
+      buttons: [
+        { label: 'Cancel' },
+        { label: 'Save', primary: true, onClick: save }
+      ],
+      onOpen: function (root) {
+        var title = root.querySelector('#edit-title');
+        title.select();
+        root.addEventListener('keydown', function (e) {
+          var inTitle = e.target === title && e.key === 'Enter';
+          var withMod = e.key === 'Enter' && (e.ctrlKey || e.metaKey);
+          if (inTitle || withMod) {
+            e.preventDefault();
+            if (save(root)) QDF.ui.closeDialog();
+          }
+        });
+      }
+    });
+  }
+
+  return { open: open };
+})();
+/* ---------- src/js/68-transfer.js ---------- */
+/* ==========================================================================
+   68-transfer.js — the YAML view, export and import.
+   ========================================================================== */
+
+QDF.transfer = (function () {
+  var U = QDF.util;
+
+  /* Light syntax colouring for the emitted subset. Works line by line on
+     escaped text, so it can never inject markup. */
+  function highlight(text) {
+    return text.replace(/\n$/, '').split('\n').map(function (line) {
+      var m;
+      if (/^\s*#/.test(line)) return '<span class="y-comment">' + U.esc(line) + '</span>';
+      if ((m = /^(\s*)(- )?([^\s:"'][^:]*|"[^"]*"):( (.*))?$/.exec(line))) {
+        return U.esc(m[1]) + (m[2] ? '<span class="y-dash">- </span>' : '') +
+          '<span class="y-key">' + U.esc(m[3]) + '</span><span class="y-punct">:</span>' +
+          (m[4] ? ' ' + value(m[5]) : '');
+      }
+      if ((m = /^(\s*)- (.*)$/.exec(line))) {
+        return U.esc(m[1]) + '<span class="y-dash">- </span>' + value(m[2]);
+      }
+      return '<span class="y-text">' + U.esc(line) + '</span>';
+    }).join('\n');
+  }
+
+  function value(v) {
+    var cls = 'y-str';
+    if (/^(null|~|true|false|\[\]|\{\})$/.test(v)) cls = 'y-lit';
+    else if (/^-?\d+(\.\d+)?$/.test(v)) cls = 'y-num';
+    else if (/^\d{4}-\d\d-\d\dT/.test(v)) cls = 'y-time';
+    else if (/^[|>][-+]?$/.test(v)) cls = 'y-punct';
+    return '<span class="' + cls + '">' + U.esc(v) + '</span>';
+  }
+
+  function currentYaml() {
+    return QDF.serialize.toYaml(QDF.store.get(), QDF.store.now());
+  }
+
+  function fileName() {
+    return 'qdvc-focus-' + U.fileStamp(QDF.store.now()) + '.yaml';
+  }
+
+  function copyText(text, done) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      done(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function showYaml() {
+    var text = currentYaml();
+    var lines = text.replace(/\n$/, '').split('\n').length;
+    QDF.ui.dialog({
+      title: 'Current state as YAML',
+      wide: true,
+      className: 'dialog-code',
+      body:
+        '<div class="code-meta">' +
+          '<span>' + U.plural(lines, 'line') + ' · ' + U.plural(text.length, 'character') + '</span>' +
+          '<span class="dim">Read-only. Export it to keep it; import it to pick up where you left off.</span>' +
+        '</div>' +
+        '<pre class="code" tabindex="0" aria-label="State as YAML">' + highlight(text) + '</pre>',
+      buttons: [
+        { label: 'Copy', icon: 'copy', align: 'left', onClick: function () {
+            copyText(text, function (ok) {
+              QDF.ui.toast(ok ? 'Copied the YAML to the clipboard.' : 'Could not copy; select the text and copy it yourself.',
+                ok ? null : { tone: 'error' });
+            });
+            return false;
+          } },
+        { label: 'Download .yaml', icon: 'exportFile', onClick: function () { exportYaml(text); return false; } },
+        { label: 'Close', primary: true }
+      ]
+    });
+  }
+
+  function exportYaml(text) {
+    var name = fileName();
+    U.download(name, text || currentYaml(), 'application/yaml');
+    QDF.ui.toast('Exported ' + name + '.');
+  }
+
+  function summary(st) {
+    var bits = [];
+    bits.push(st.current ? '“' + st.current.title + '” in focus' : 'nothing in focus');
+    bits.push(U.plural(st.queue.length, 'queued', 'queued'));
+    bits.push(st.background.length + ' in background');
+    bits.push(st.done.length + ' done');
+    return bits.join(', ');
+  }
+
+  /* prefill: optional { text, name } from a file dropped on the window. */
+  function importDialog(prefill) {
+    var parsed = null;
+
+    function check(root) {
+      var text = root.querySelector('#import-text').value;
+      var verdict = root.querySelector('#import-verdict');
+      var go = root.querySelector('#import-go');
+      parsed = null;
+      if (!text.trim()) {
+        verdict.className = 'import-verdict';
+        verdict.innerHTML = 'Choose a file, drop one here, or paste YAML above.';
+        go.disabled = true;
+        return;
+      }
+      try {
+        var r = QDF.serialize.fromYaml(text, QDF.store.now());
+        parsed = r.state;
+        verdict.className = 'import-verdict is-ok';
+        verdict.innerHTML = '<b>Ready to import:</b> ' + U.esc(summary(parsed)) + '. ' +
+          'This replaces everything here now; you can undo it afterwards.' +
+          (r.warnings.length ? '<ul class="import-warnings">' + r.warnings.slice(0, 6).map(function (w) {
+            return '<li>' + U.esc(w) + '</li>';
+          }).join('') + (r.warnings.length > 6 ? '<li>…and ' + (r.warnings.length - 6) + ' more.</li>' : '') + '</ul>' : '');
+        go.disabled = false;
+      } catch (e) {
+        verdict.className = 'import-verdict is-error';
+        verdict.innerHTML = '<b>Cannot import this.</b> ' + U.esc(e.message);
+        go.disabled = true;
+      }
+    }
+
+    function load(root, file) {
+      U.readFile(file, function (err, text) {
+        if (err) { QDF.ui.toast('Could not read ' + file.name + '.', { tone: 'error' }); return; }
+        root.querySelector('#import-text').value = text;
+        root.querySelector('#import-source').textContent = file.name;
+        check(root);
+      });
+    }
+
+    QDF.ui.dialog({
+      title: 'Import state',
+      wide: true,
+      body:
+        '<div class="import-drop" id="import-drop">' +
+          '<button type="button" class="btn" id="import-choose">' + QDF.icon('importFile') + '<span>Choose file…</span></button>' +
+          '<span class="import-drop-text">or drop a <code>.yaml</code> file here, or paste below</span>' +
+          '<span class="import-source" id="import-source"></span>' +
+        '</div>' +
+        '<textarea class="field field-code" id="import-text" spellcheck="false" autocomplete="off" rows="14" ' +
+          'placeholder="format: qdvc-focus/1&#10;current:&#10;  title: …" aria-label="YAML to import"></textarea>' +
+        '<div class="import-verdict" id="import-verdict" aria-live="polite"></div>',
+      buttons: [
+        { label: 'Cancel' },
+        { label: 'Import and replace', id: 'import-go', primary: true, disabled: true, onClick: function () {
+            if (!parsed) return false;
+            QDF.store.replace(parsed, 'Import');
+            QDF.ui.toast('Imported: ' + summary(QDF.store.get()) + '.', { undo: true });
+            return true;
+          } }
+      ],
+      onOpen: function (root) {
+        var input = document.getElementById('file-input');
+        var ta = root.querySelector('#import-text');
+        var drop = root.querySelector('#import-drop');
+        var timer = null;
+        ta.addEventListener('input', function () {
+          clearTimeout(timer);
+          root.querySelector('#import-source').textContent = '';
+          timer = setTimeout(function () { check(root); }, 200);
+        });
+        root.querySelector('#import-choose').addEventListener('click', function () {
+          input.value = '';
+          input.onchange = function () { if (input.files && input.files[0]) load(root, input.files[0]); };
+          input.click();
+        });
+        drop.addEventListener('dragover', function (e) {
+          if (hasFiles(e)) { e.preventDefault(); e.stopPropagation(); drop.classList.add('is-over'); }
+        });
+        drop.addEventListener('dragleave', function () { drop.classList.remove('is-over'); });
+        drop.addEventListener('drop', function (e) {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          drop.classList.remove('is-over');
+          load(root, e.dataTransfer.files[0]);
+        });
+        if (prefill) {
+          ta.value = prefill.text;
+          root.querySelector('#import-source').textContent = prefill.name || '';
+        }
+        check(root);
+        if (!prefill) root.querySelector('#import-choose').focus();
+      }
+    });
+  }
+
+  function hasFiles(e) {
+    var types = e.dataTransfer && e.dataTransfer.types;
+    return !!types && Array.prototype.indexOf.call(types, 'Files') !== -1;
+  }
+
+  return {
+    showYaml: showYaml, exportYaml: exportYaml, importDialog: importDialog,
+    highlight: highlight, hasFiles: hasFiles
+  };
+})();
+/* ---------- src/js/70-about.js ---------- */
+/* ==========================================================================
+   70-about.js — the About dialog: what the app does and its shortcuts.
+   ========================================================================== */
+
+QDF.about = (function () {
+  var U = QDF.util;
+
+  var KEYS = [
+    ['N', 'Add a task to the queue'],
+    ['Enter', 'In the add box: add to the end of the queue'],
+    ['Shift + Enter', 'In the add box: add as up next'],
+    ['Ctrl + Z', 'Undo the last change (⌘ Z on a Mac)'],
+    ['Y', 'Show the current state as YAML'],
+    ['?', 'This window'],
+    ['Esc', 'Close a window or menu'],
+    ['Double-click', 'Edit a task']
+  ];
+
+  function show() {
+    QDF.ui.dialog({
+      title: 'About ' + QDF.APP.name,
+      className: 'dialog-about',
+      body:
+        '<div class="about-head">' +
+          '<div class="about-mark" aria-hidden="true">' + QDF.view.brandMark('bm-about') + '</div>' +
+          '<div><div class="about-name">' + U.esc(QDF.APP.name) + '</div>' +
+          '<div class="dim">Version ' + U.esc(QDF.APP.version) + ' · format ' + U.esc(QDF.APP.format) + '</div></div>' +
+        '</div>' +
+        '<p>One thing in focus, a queue of what could come next, and a lane for work that carries on without you. ' +
+          'Drag a task into <b>Up next</b> to line it up; <b>Done, start next</b> moves on. ' +
+          '<b>Send to background</b> parks the current task with its own timer while you pick up the next one.</p>' +
+        '<p>The big clock counts from when the task in focus was first started. <b>Since last update</b> in the toolbar ' +
+          'counts from the last time you changed anything here; click it to check in without changing anything.</p>' +
+        '<p>Everything is kept in this browser only. Export the YAML to keep a copy or to carry on elsewhere, and import it to resume.</p>' +
+        '<table class="keys"><tbody>' + KEYS.map(function (k) {
+          return '<tr><td>' + k[0].split(' + ').map(function (p) { return '<kbd>' + U.esc(p) + '</kbd>'; }).join(' + ') +
+            '</td><td>' + U.esc(k[1]) + '</td></tr>';
+        }).join('') + '</tbody></table>',
+      buttons: [{ label: 'Close', primary: true }]
+    });
+  }
+
+  return { show: show };
+})();
+
+/* The application mark: a lens over a horizon line. Used in the toolbar and
+   in this dialog. */
+QDF.view.brandMark = function (prefix) {
+  var p = prefix || 'bm';
+  return '<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" focusable="false">' +
+    '<defs>' +
+      '<linearGradient id="' + p + '-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b5563"/><stop offset="1" stop-color="#1f242b"/></linearGradient>' +
+      '<radialGradient id="' + p + '-lens" cx=".42" cy=".36" r=".7"><stop offset="0" stop-color="#9fd0ff"/><stop offset=".55" stop-color="#3a7fd0"/><stop offset="1" stop-color="#16407a"/></radialGradient>' +
+      '<linearGradient id="' + p + '-gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+    '</defs>' +
+    '<rect x="1.5" y="1.5" width="29" height="29" rx="7" fill="url(#' + p + '-body)" stroke="#14181d"/>' +
+    '<rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="none" stroke="#fff" stroke-opacity=".18"/>' +
+    '<circle cx="16" cy="16" r="9" fill="url(#' + p + '-lens)" stroke="#0e2c55"/>' +
+    '<path d="M7.6 17.5h16.8" stroke="#e8f3ff" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>' +
+    '<circle cx="16" cy="17.5" r="2" fill="#fff"/>' +
+    '<ellipse cx="16" cy="11.6" rx="6.2" ry="3.6" fill="url(#' + p + '-gloss)"/>' +
+  '</svg>';
+};
+/* ---------- src/js/80-keys.js ---------- */
+/* ==========================================================================
+   80-keys.js — keyboard shortcuts. Single-key shortcuts are ignored while
+   typing in a field, while a dialog or menu is open, and with modifiers.
+   The About dialog lists them; keep the two in step.
+   ========================================================================== */
+
+QDF.keys = (function () {
+
+  function isTyping(t) {
+    return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  }
+
+  function onKeyDown(e) {
+    if (QDF.ui.handleKey(e)) return;
+    var t = e.target;
+    var typing = isTyping(t);
+    var mod = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'Escape' && typing && (t.id === 'add-input' || t.id === 'quick-start-input')) {
+      t.value = '';
+      t.blur();
+      return;
+    }
+    if (mod && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z') && !typing && !QDF.ui.isOpen()) {
+      e.preventDefault();
+      QDF.app.undo();
+      return;
+    }
+    if (typing || mod || e.altKey || QDF.ui.isOpen()) return;
+
+    if (e.key === 'n' || e.key === 'N' || e.key === '/') {
+      e.preventDefault();
+      QDF.app.focusAdd();
+    } else if (e.key === 'y' || e.key === 'Y') {
+      e.preventDefault();
+      QDF.transfer.showYaml();
+    } else if (e.key === '?') {
+      e.preventDefault();
+      QDF.about.show();
+    }
+  }
+
+  return { onKeyDown: onKeyDown, isTyping: isTyping };
+})();
+/* ---------- src/js/90-app.js ---------- */
+/* ==========================================================================
+   90-app.js — the controller: boot, rendering, actions, drag and drop, and
+   the once-a-second refresh of every running clock.
+
+   Buttons declare what they do with data-act (and data-id for the task);
+   one delegated click handler looks the name up in ACTIONS. Every change
+   goes through QDF.store.commit, which re-renders via onChange.
+   ========================================================================== */
+
+QDF.app = (function () {
+  var U = QDF.util, M = QDF.model, S = QDF.store, V = QDF.view, ui = QDF.ui;
+
+  var prefs = { doneCollapsed: false };
+  var drag = null;          /* { id, card } while a task is being dragged */
+  var activeZone = null;
+  var marker = null;
+  var renderedDay = '';
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  function q(title) {
+    return '\u201c' + title + '\u201d';
+  }
+
+  /* ------------------------------------------------------------- prefs */
+
+  function loadPrefs() {
+    try {
+      var raw = window.localStorage.getItem(QDF.APP.prefsKey);
+      if (raw) prefs.doneCollapsed = !!JSON.parse(raw).doneCollapsed;
+    } catch (e) { /* defaults */ }
+  }
+
+  function savePrefs() {
+    try { window.localStorage.setItem(QDF.APP.prefsKey, JSON.stringify(prefs)); } catch (e) { /* ignore */ }
+  }
+
+  /* ------------------------------------------------------------ render */
+
+  /* Re-rendering replaces markup, so remember what had focus and put it
+     back: the same id, or the same action on the same task. */
+  function captureFocus() {
+    var el = document.activeElement;
+    if (!el || el === document.body) return null;
+    return {
+      id: el.id || null,
+      act: el.getAttribute && el.getAttribute('data-act'),
+      dataId: el.getAttribute && el.getAttribute('data-id'),
+      value: 'value' in el ? el.value : null,
+      start: el.selectionStart, end: el.selectionEnd
+    };
+  }
+
+  function restoreFocus(f) {
+    if (!f || document.activeElement !== document.body) return;
+    var el = f.id ? $(f.id) : null;
+    if (!el && f.act) {
+      el = document.querySelector('[data-act="' + f.act + '"]' + (f.dataId ? '[data-id="' + cssEscape(f.dataId) + '"]' : ''));
+    }
+    if (!el) return;
+    el.focus();
+    if (f.value !== null && 'value' in el && el.value === '' && f.value) {
+      el.value = f.value;
+      try { el.setSelectionRange(f.start, f.end); } catch (e) { /* not a text field */ }
+    }
+  }
+
+  function cssEscape(s) {
+    return String(s).replace(/["\\]/g, '\\$&');
+  }
+
+  function render() {
+    var s = S.get(), now = S.now();
+    var focus = captureFocus();
+    $('now').innerHTML = V.now(s, now);
+    $('queue-body').innerHTML = V.queue(s, now);
+    $('queue-count').textContent = s.queue.length ? String(s.queue.length) : '';
+    $('background').innerHTML = V.background(s, now);
+    $('done').innerHTML = V.done(s, now, prefs);
+    $('idle-slot').innerHTML = V.idle(s, now);
+    $('statusbar').innerHTML = V.status(s, now, S.info());
+    var label = S.undoLabel(), undoBtn = $('btn-undo');
+    undoBtn.disabled = !label;
+    undoBtn.title = label ? 'Undo: ' + label + ' (Ctrl+Z)' : 'Nothing to undo';
+    renderedDay = U.dayKey(U.iso(now));
+    restoreFocus(focus);
+    tick();
+  }
+
+  function tick() {
+    var s = S.get(), now = S.now();
+    if (!s) return;
+    var nodes = document.querySelectorAll('[data-tick]');
+    for (var k = 0; k < nodes.length; k++) {
+      var el = nodes[k];
+      var from = el.getAttribute('data-from');
+      var sec = (Number(el.getAttribute('data-base')) || 0) + (from ? U.secondsSince(from, now) : 0);
+      var text = V.format(el.getAttribute('data-tick'), sec);
+      if (el.textContent !== text) el.textContent = text;
+    }
+    var chip = $('idle-chip');
+    if (chip) {
+      var level = V.idleLevel(M.idle(s, now));
+      if (chip.getAttribute('data-level') !== level) chip.setAttribute('data-level', level);
+    }
+    var title = s.current
+      ? U.clock(M.elapsed(s.current, now)) + ' \u00b7 ' + s.current.title + ' \u2014 ' + QDF.APP.name
+      : QDF.APP.name;
+    if (document.title !== title) document.title = title;
+    /* "Today" and "Yesterday" move at midnight. */
+    if (!drag && renderedDay && U.dayKey(U.iso(now)) !== renderedDay) render();
+  }
+
+  /* ----------------------------------------------------------- actions */
+
+  function commit(label, fn) {
+    return S.commit(label, fn);
+  }
+
+  function undo() {
+    var label = S.undo();
+    ui.clearToasts();
+    ui.toast(label ? 'Undone: ' + label + '.' : 'Nothing to undo.', { timeout: 2500 });
+  }
+
+  function focusAdd() {
+    var input = $('add-input');
+    input.focus();
+    input.select();
+  }
+
+  function addFromInput(asNext) {
+    var input = $('add-input');
+    var title = input.value;
+    if (!title.trim()) { input.focus(); return; }
+    commit(asNext ? 'Add task as up next' : 'Add task', function (s, now) {
+      return M.add(s, title, '', { next: asNext }, now);
+    });
+    input.value = '';
+    input.focus();
+  }
+
+  function quickStart(form) {
+    var input = form.querySelector('input[name="title"]');
+    var title = input.value;
+    if (!title.trim()) { input.focus(); return; }
+    commit('Start task', function (s, now) { return M.addAndStart(s, title, '', now); });
+  }
+
+  function startTask(id) {
+    var r = commit('Start task', function (s, now) { return M.start(s, id, now); });
+    if (!r) return;
+    if (r.from === 'background' || r.previous) {
+      ui.toast((r.from === 'background' ? 'Brought ' + q(r.item.title) + ' forward' : 'Started ' + q(r.item.title)) +
+        (r.previous ? '; ' + q(r.previous.title) + ' is up next.' : '.'), { undo: true });
+    }
+  }
+
+  function finishTask(id) {
+    var r = commit('Finish task', function (s, now) { return M.finish(s, id, now); });
+    if (r) ui.toast('Done: ' + q(r.title) + '.', { undo: true });
+  }
+
+  function removeTask(id) {
+    var r = commit('Remove task', function (s) { return M.remove(s, id); });
+    if (r) ui.toast('Removed ' + q(r.title) + '.', { undo: true });
+  }
+
+  function pauseCurrent(where) {
+    var r = commit(where === 'end' ? 'Move to end of queue' : 'Pause task', function (s, now) {
+      return M.pause(s, now, where);
+    });
+    if (r) ui.toast(where === 'end'
+      ? q(r.title) + ' is back at the end of the queue.'
+      : 'Paused ' + q(r.title) + '; it is up next.', { undo: true });
+  }
+
+  function nowMenu(anchor) {
+    var s = S.get(), c = s.current, next = M.upNext(s);
+    if (!c) return;
+    ui.menu(anchor, [
+      { label: 'Edit…', icon: 'edit', onSelect: function () { QDF.editor.open(c.id); } },
+      'separator',
+      { label: next ? 'Swap with up next' : 'Swap with up next (queue is empty)', icon: 'swap', disabled: !next,
+        onSelect: function () { startTask(next.id); } },
+      { label: 'Pause, keep it up next', icon: 'pause', onSelect: function () { pauseCurrent('front'); } },
+      { label: 'Back to the end of the queue', icon: 'queueEnd', onSelect: function () { pauseCurrent('end'); } },
+      { label: 'Done, start nothing', icon: 'check', onSelect: function () { finishTask(c.id); } },
+      'separator',
+      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(c.id); } }
+    ]);
+  }
+
+  function backgroundMenu(anchor, id) {
+    var loc = M.find(S.get(), id);
+    if (!loc) return;
+    ui.menu(anchor, [
+      { label: 'Bring forward', icon: 'forward', onSelect: function () { startTask(id); } },
+      { label: 'Done', icon: 'check', onSelect: function () { finishTask(id); } },
+      { label: 'Back to the queue as up next', icon: 'up', onSelect: function () {
+          var r = commit('Move to queue', function (s, now) { return M.backgroundToQueue(s, id, now); });
+          if (r) ui.toast(q(r.title) + ' is up next.', { undo: true });
+        } },
+      { label: 'Edit…', icon: 'edit', onSelect: function () { QDF.editor.open(id); } },
+      'separator',
+      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(id); } }
+    ]);
+  }
+
+  var ACTIONS = {
+    'done-next': function () {
+      var r = commit('Finish task', function (s, now) { return M.finishAndNext(s, now); });
+      if (r) ui.toast('Done: ' + q(r.done.title) + (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
+    },
+    'to-background': function () {
+      var r = commit('Send to background', function (s, now) { return M.toBackground(s, now); });
+      if (r) ui.toast(q(r.sent.title) + ' is running in the background' +
+        (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
+    },
+    'start': function (el, id) { startTask(id); },
+    'finish': function (el, id) { finishTask(id); },
+    'remove': function (el, id) { removeTask(id); },
+    'make-next': function (el, id) {
+      commit('Reorder queue', function (s) { return M.makeNext(s, id); });
+    },
+    'edit': function (el, id) { QDF.editor.open(id); },
+    'restore': function (el, id) {
+      var r = commit('Restore task', function (s) { return M.restore(s, id); });
+      if (r) ui.toast(q(r.title) + ' is back in the queue.', { undo: true });
+    },
+    'clear-done': function () {
+      var n = commit('Clear done log', function (s) { return M.clearDone(s); });
+      if (n) ui.toast('Cleared ' + U.plural(n, 'task') + ' from the done log.', { undo: true });
+    },
+    'toggle-done': function () {
+      prefs.doneCollapsed = !prefs.doneCollapsed;
+      savePrefs();
+      render();
+    },
+    'check-in': function (el) {
+      S.touch();
+      var chip = $('idle-chip');
+      if (chip) {
+        chip.classList.add('is-pulsing');
+        setTimeout(function () { var c = $('idle-chip'); if (c) c.classList.remove('is-pulsing'); }, 600);
+      }
+    },
+    'now-menu': function (el) { nowMenu(el); },
+    'bg-menu': function (el, id) { backgroundMenu(el, id); },
+    'undo': function () { undo(); },
+    'show-yaml': function () { QDF.transfer.showYaml(); },
+    'export': function () { QDF.transfer.exportYaml(); },
+    'import': function () { QDF.transfer.importDialog(); },
+    'about': function () { QDF.about.show(); }
+  };
+
+  /* ------------------------------------------------------------ events */
+
+  function onClick(e) {
+    var el = e.target.closest('[data-act]');
+    if (!el || el.disabled || el.closest('#layer')) return;
+    var fn = ACTIONS[el.getAttribute('data-act')];
+    if (!fn) return;
+    e.preventDefault();
+    fn(el, el.getAttribute('data-id'), e);
+  }
+
+  function onDblClick(e) {
+    if (e.target.closest('button, input, textarea, a')) return;
+    var el = e.target.closest('[data-dbl-edit]');
+    if (!el) return;
+    if (window.getSelection) window.getSelection().removeAllRanges();
+    QDF.editor.open(el.getAttribute('data-dbl-edit'));
+  }
+
+  function onSubmit(e) {
+    var form = e.target.closest('[data-form]');
+    if (!form) return;
+    e.preventDefault();
+    var kind = form.getAttribute('data-form');
+    if (kind === 'add') addFromInput(false);
+    else if (kind === 'quick-start') quickStart(form);
+  }
+
+  /* ------------------------------------------------------ drag and drop */
+
+  function zoneOf(e) {
+    return e.target && e.target.closest ? e.target.closest('[data-drop]') : null;
+  }
+
+  function setZone(zone) {
+    if (activeZone === zone) return;
+    if (activeZone) activeZone.classList.remove('drop-active');
+    activeZone = zone;
+    if (zone) zone.classList.add('drop-active');
+  }
+
+  function getMarker() {
+    if (!marker) {
+      marker = document.createElement('li');
+      marker.className = 'drop-marker';
+      marker.setAttribute('aria-hidden', 'true');
+    }
+    return marker;
+  }
+
+  function dropMarker() {
+    if (marker && marker.parentNode) marker.parentNode.removeChild(marker);
+  }
+
+  /* The marker takes no space, so placing it never moves the items it is
+     measured against. */
+  function placeMarker(list, y) {
+    var items = Array.prototype.filter.call(list.querySelectorAll('.later-item'), function (li) {
+      return !li.contains(drag.card);
+    });
+    var before = null;
+    for (var k = 0; k < items.length; k++) {
+      var r = items[k].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = items[k]; break; }
+    }
+    var m = getMarker();
+    if (before) {
+      if (m.nextSibling !== before || m.parentNode !== list) list.insertBefore(m, before);
+      m.setAttribute('data-before', before.querySelector('[data-drag-id]').getAttribute('data-drag-id'));
+    } else {
+      if (list.lastChild !== m) list.appendChild(m);
+      m.setAttribute('data-before', '');
+    }
+  }
+
+  function onDragStart(e) {
+    var card = e.target.closest && e.target.closest('[data-drag-id]');
+    if (!card) return;
+    drag = { id: card.getAttribute('data-drag-id'), card: card };
+    ui.closeMenu();
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', card.querySelector('.task-title').textContent);
+    } catch (err) { /* some browsers refuse custom data; the id is kept here anyway */ }
+    /* After the browser has taken its snapshot for the drag image. */
+    setTimeout(function () {
+      if (!drag) return;
+      card.classList.add('is-dragging');
+      document.body.classList.add('dragging-task');
+    }, 0);
+  }
+
+  function onDragOver(e) {
+    if (!drag) {
+      if (QDF.transfer.hasFiles(e) && !ui.isDialogOpen()) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        document.body.classList.add('file-over');
+      }
+      return;
+    }
+    var zone = zoneOf(e);
+    setZone(zone);
+    if (!zone) { dropMarker(); return; }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (zone.getAttribute('data-drop') === 'later') placeMarker(zone, e.clientY);
+    else dropMarker();
+  }
+
+  function onDragLeave(e) {
+    if (!e.relatedTarget) {
+      document.body.classList.remove('file-over');
+      if (drag) { setZone(null); dropMarker(); }
+    }
+  }
+
+  function endDrag() {
+    if (drag && drag.card) drag.card.classList.remove('is-dragging');
+    document.body.classList.remove('dragging-task');
+    setZone(null);
+    dropMarker();
+    drag = null;
+  }
+
+  function onDrop(e) {
+    if (!drag) {
+      document.body.classList.remove('file-over');
+      if (!QDF.transfer.hasFiles(e) || ui.isDialogOpen()) return;
+      e.preventDefault();
+      var file = e.dataTransfer.files[0];
+      U.readFile(file, function (err, text) {
+        if (err) { ui.toast('Could not read ' + file.name + '.', { tone: 'error' }); return; }
+        QDF.transfer.importDialog({ text: text, name: file.name });
+      });
+      return;
+    }
+    var zone = zoneOf(e);
+    if (!zone) { endDrag(); return; }
+    e.preventDefault();
+    var id = drag.id;
+    var kind = zone.getAttribute('data-drop');
+    var before = marker && marker.parentNode ? (marker.getAttribute('data-before') || null) : null;
+    endDrag();
+    if (kind === 'now') startTask(id);
+    else if (kind === 'next') commit('Reorder queue', function (s) { return M.makeNext(s, id); });
+    else if (kind === 'later') commit('Reorder queue', function (s) { return M.moveToLater(s, id, before); });
+  }
+
+  /* ------------------------------------------------------------- boot */
+
+  function bind() {
+    document.addEventListener('click', onClick);
+    document.addEventListener('dblclick', onDblClick);
+    document.addEventListener('submit', onSubmit);
+    document.addEventListener('mousedown', ui.onDocumentPointer, true);
+    document.addEventListener('keydown', QDF.keys.onKeyDown);
+    document.addEventListener('dragstart', onDragStart);
+    document.addEventListener('dragover', onDragOver);
+    document.addEventListener('dragleave', onDragLeave);
+    document.addEventListener('drop', onDrop);
+    document.addEventListener('dragend', endDrag);
+    window.addEventListener('resize', function () { ui.closeMenu(); });
+    document.addEventListener('visibilitychange', tick);
+
+    $('add-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        addFromInput(e.shiftKey);
+      }
+    });
+
+    window.addEventListener('storage', function (e) {
+      if (e.key !== QDF.APP.storageKey || drag) return;
+      if (S.reloadFromStorage()) ui.toast('Updated with changes made in another tab.', { timeout: 3000 });
+    });
+
+    S.onChange(function (ev) {
+      /* Any newer change makes an offered Undo refer to something else. */
+      if (ev.type !== 'touch') ui.clearToasts();
+      render();
+    });
+  }
+
+  function boot() {
+    loadPrefs();
+    S.load();
+    $('brand-mark').innerHTML = V.brandMark('bm-bar');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function (el) {
+      el.outerHTML = QDF.icon(el.getAttribute('data-icon'));
+    });
+    bind();
+    render();
+    var notice = S.takeNotice();
+    if (notice) ui.toast(notice, { tone: 'error', timeout: 15000 });
+    setInterval(tick, 500);
+  }
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  }
+
+  return {
+    boot: boot, render: render, tick: tick, commit: commit, undo: undo, focusAdd: focusAdd,
+    actions: ACTIONS
+  };
+})();
+</script>
+</body>
+</html>
