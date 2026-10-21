@@ -98,6 +98,20 @@ QDF.store = (function () {
     return result;
   }
 
+  /* A change that is not worth an undo step — switching which running task
+     is in the foreground. It still counts as an interaction and is saved. */
+  function quiet(fn) {
+    var t = now();
+    var next = clone(state);
+    var result = fn(next, t);
+    if (result === null || result === undefined || result === false) return null;
+    next.lastInteraction = U.iso(t);
+    state = next;
+    save();
+    emit({ type: 'quiet', result: result });
+    return result;
+  }
+
   /* "I'm still on it": counts as an interaction without changing anything
      worth undoing. */
   function touch() {
@@ -199,7 +213,7 @@ QDF.store = (function () {
   }
 
   return {
-    load: load, get: get, commit: commit, touch: touch, undo: undo, replace: replace,
+    load: load, get: get, commit: commit, quiet: quiet, touch: touch, undo: undo, replace: replace,
     reloadFromStorage: reloadFromStorage, undoLabel: undoLabel, onChange: onChange,
     resetAll: resetAll, usage: usage, ownKeys: ownKeys,
     info: function () { return info; }, takeNotice: takeNotice,

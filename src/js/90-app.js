@@ -31,7 +31,7 @@ QDF.app = (function () {
   /* ---------------------------------------------------- keeping "now" */
 
   function scroller() { return $('timeline-scroll'); }
-  function anchor() { return $('tl-present') || $('tl-now'); }
+  function anchor() { return $('tl-now'); }
 
   /* Where the present sits in the viewport, so a re-render that adds a row
      above it (a task finished, say) can keep it exactly where it was. */
@@ -46,7 +46,9 @@ QDF.app = (function () {
     var el = anchor(), sc = scroller();
     if (!el || !sc) return;
     var top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top;
-    var target = sc.scrollTop + top - Math.round(sc.clientHeight * 0.3);
+    /* The now line sits low in the view: the running cards end just above
+       it, and the queue starts just below. */
+    var target = sc.scrollTop + top - Math.round(sc.clientHeight * 0.68);
     if (sc.scrollTo) sc.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
     else sc.scrollTop = target;
   }
@@ -163,8 +165,9 @@ QDF.app = (function () {
       var level = V.idleLevel(M.idle(s, now));
       if (chip.getAttribute('data-level') !== level) chip.setAttribute('data-level', level);
     }
-    var title = s.current
-      ? U.clock(M.elapsed(s.current, now)) + ' \u00b7 ' + s.current.title + ' \u2014 ' + QDF.APP.name
+    var fg = M.foreground(s);
+    var title = fg
+      ? (P.get('timers') ? U.clock(M.elapsed(fg, now)) + ' \u00b7 ' : '') + fg.title + ' \u2014 ' + QDF.APP.name
       : QDF.APP.name;
     if (document.title !== title) document.title = title;
     /* "Today" and "Yesterday" move at midnight; a new minute moves the
@@ -199,14 +202,19 @@ QDF.app = (function () {
     input.select();
   }
 
-  function addFromInput(asNext) {
+  /* How the add box was submitted: 'end', 'next' (Shift) or 'start' (Ctrl). */
+  function addFromInput(how) {
     var input = $('add-input');
     var title = input.value;
     if (!title.trim()) { input.focus(); return; }
     input.value = '';
-    commit(asNext ? 'Add task as up next' : 'Add task', function (s, now) {
-      return M.add(s, title, '', { next: asNext }, now);
-    });
+    if (how === 'start') {
+      commit('Start task', function (s, now) { return M.addAndStart(s, title, '', now); });
+    } else {
+      commit(how === 'next' ? 'Add task as up next' : 'Add task', function (s, now) {
+        return M.add(s, title, '', { next: how === 'next' }, now);
+      });
+    }
     focusAdd();
   }
 
@@ -218,13 +226,20 @@ QDF.app = (function () {
     commit('Start task', function (s, now) { return M.addAndStart(s, title, '', now); });
   }
 
+  function alongside(s, item) {
+    var others = s.active.filter(function (x) { return x.id !== item.id; });
+    return others.length ? ' alongside ' + (others.length === 1 ? q(others[0].title) : U.plural(others.length, 'other task')) : '';
+  }
+
   function startTask(id) {
+    var before = S.get();
     var r = commit('Start task', function (s, now) { return M.start(s, id, now); });
-    if (!r) return;
-    if (r.from === 'background' || r.previous) {
-      ui.toast((r.from === 'background' ? 'Brought ' + q(r.item.title) + ' forward' : 'Started ' + q(r.item.title)) +
-        (r.previous ? '; ' + q(r.previous.title) + ' is up next.' : '.'), { undo: true });
-    }
+    if (r && before.active.length) ui.toast('Started ' + q(r.title) + alongside(S.get(), r) + '.', { undo: true });
+  }
+
+  function startNext() {
+    var r = commit('Start up next', function (s, now) { return M.startNext(s, now); });
+    if (r) ui.toast('Started ' + q(r.title) + alongside(S.get(), r) + '.', { undo: true });
   }
 
   function finishTask(id) {
@@ -232,18 +247,34 @@ QDF.app = (function () {
     if (r) ui.toast('Done: ' + q(r.title) + '.', { undo: true });
   }
 
+  function finishAndNext(id) {
+    var r = commit('Finish task', function (s, now) { return M.finishAndNext(s, id, now); });
+    if (r) ui.toast('Done: ' + q(r.done.title) + (r.next ? '. Started ' + q(r.next.title) + '.' : '.'), { undo: true });
+  }
+
   function removeTask(id) {
     var r = commit('Remove task', function (s) { return M.remove(s, id); });
     if (r) ui.toast('Removed ' + q(r.title) + '.', { undo: true });
   }
 
-  function pauseCurrent(where) {
+  function pauseTask(id, where) {
     var r = commit(where === 'end' ? 'Move to end of queue' : 'Pause task', function (s, now) {
-      return M.pause(s, now, where);
+      return M.pause(s, id, now, where);
     });
     if (r) ui.toast(where === 'end'
-      ? q(r.title) + ' is back at the end of the queue.'
+      ? 'Paused ' + q(r.title) + '; it is back at the end of the queue.'
       : 'Paused ' + q(r.title) + '; it is up next.', { undo: true });
+  }
+
+  function swapTask(id) {
+    var r = commit('Swap with up next', function (s, now) { return M.swapWithNext(s, id, now); });
+    if (r) ui.toast('Paused ' + q(r.paused.title) + ' and started ' + q(r.started.title) + '.', { undo: true });
+  }
+
+  /* Which running task is in the foreground is a pointer, not history: it
+     is saved, but it is not an undo step and no stretch changes. */
+  function bringForward(id) {
+    S.quiet(function (s) { return M.setForeground(s, id); });
   }
 
   function clearDone() {
@@ -251,20 +282,33 @@ QDF.app = (function () {
     if (n) ui.toast('Cleared ' + U.plural(n, 'finished task') + ' from the timeline.', { undo: true });
   }
 
-  function nowMenu(anchorEl) {
-    var s = S.get(), c = s.current, next = M.upNext(s);
-    if (!c) return;
-    ui.menu(anchorEl, [
-      { label: 'Show in inspector', icon: 'info', onSelect: function () { select(c.id); } },
+  function taskMenu(anchorEl, id) {
+    var s = S.get(), loc = M.find(s, id), next = M.upNext(s);
+    if (!loc || loc.list !== 'active') return;
+    var isFg = M.foreground(s) === loc.item;
+    var items = [
+      { label: 'Show in inspector', icon: 'info', onSelect: function () { select(id); } },
+      'separator'
+    ];
+    if (!isFg) items.push({ label: 'Bring to the foreground', icon: 'target', onSelect: function () { bringForward(id); } });
+    items.push(
+      { label: 'Done', icon: 'check', onSelect: function () { finishTask(id); } },
+      { label: next ? 'Pause it and start up next' : 'Pause it and start up next (queue is empty)', icon: 'swap', disabled: !next,
+        onSelect: function () { swapTask(id); } },
+      { label: 'Pause, keep it up next', icon: 'pause', onSelect: function () { pauseTask(id, 'front'); } },
+      { label: 'Pause, back to the end of the queue', icon: 'queueEnd', onSelect: function () { pauseTask(id, 'end'); } },
       'separator',
-      { label: next ? 'Swap with up next' : 'Swap with up next (queue is empty)', icon: 'swap', disabled: !next,
-        onSelect: function () { startTask(next.id); } },
-      { label: 'Pause, keep it up next', icon: 'pause', onSelect: function () { pauseCurrent('front'); } },
-      { label: 'Back to the end of the queue', icon: 'queueEnd', onSelect: function () { pauseCurrent('end'); } },
-      { label: 'Done, start nothing', icon: 'check', onSelect: function () { finishTask(c.id); } },
-      'separator',
-      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(c.id); } }
-    ]);
+      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(id); } }
+    );
+    ui.menu(anchorEl, items);
+  }
+
+  function applyTimers() {
+    var on = !!P.get('timers'), btn = $('btn-timers');
+    if (!btn) return;
+    /* The button is "Hide timers", pressed in while they are hidden. */
+    btn.setAttribute('aria-pressed', String(!on));
+    btn.title = on ? 'Hide timers (T)' : 'Show timers (T)';
   }
 
   function resetAll() {
@@ -273,33 +317,29 @@ QDF.app = (function () {
     P.reset();
     selectedId = null;
     applyDrawers();
+    applyTimers();
     jumpPending = true;
     render();
     ui.toast('Reset. Everything ' + QDF.APP.name + ' kept in this browser has been deleted.', { timeout: 6000 });
   }
 
+  function foregroundId() {
+    var fg = M.foreground(S.get());
+    return fg ? fg.id : null;
+  }
+
   var ACTIONS = {
-    'done-next': function () {
-      var r = commit('Finish task', function (s, now) { return M.finishAndNext(s, now); });
-      if (r) ui.toast('Done: ' + q(r.done.title) + (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
-    },
-    'to-background': function () {
-      var r = commit('Send to background', function (s, now) { return M.toBackground(s, now); });
-      if (r) ui.toast(q(r.sent.title) + ' is running in the background' +
-        (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
-    },
+    'done-next': function (el, id) { finishAndNext(id || foregroundId()); },
+    'start-next': function () { startNext(); },
     'start': function (el, id) { startTask(id); },
     'finish': function (el, id) { finishTask(id); },
+    'foreground': function (el, id) { bringForward(id); },
     'remove': function (el, id) { removeTask(id); },
     'make-next': function (el, id) {
       commit('Reorder queue', function (s) { return M.makeNext(s, id); });
     },
-    'pause-front': function () { pauseCurrent('front'); },
-    'pause-end': function () { pauseCurrent('end'); },
-    'bg-to-queue': function (el, id) {
-      var r = commit('Move to queue', function (s, now) { return M.backgroundToQueue(s, id, now); });
-      if (r) ui.toast(q(r.title) + ' is up next.', { undo: true });
-    },
+    'pause-front': function (el, id) { pauseTask(id, 'front'); },
+    'pause-end': function (el, id) { pauseTask(id, 'end'); },
     'restore': function (el, id) {
       var r = commit('Restore task', function (s) { return M.restore(s, id); });
       if (r) ui.toast(q(r.title) + ' is back in the queue.', { undo: true });
@@ -312,8 +352,9 @@ QDF.app = (function () {
         setTimeout(function () { var c = $('idle-chip'); if (c) c.classList.remove('is-pulsing'); }, 600);
       }
     },
-    'now-menu': function (el) { nowMenu(el); },
+    'task-menu': function (el, id) { taskMenu(el, id); },
     'undo': function () { undo(); },
+    'toggle-timers': function () { P.set('timers', !P.get('timers')); },
     'toggle-overview': function () { P.set('overview', !P.get('overview')); },
     'toggle-inspector': function () { P.set('inspector', !P.get('inspector')); },
     'jump-now': function () { jumpNow(true); },
@@ -353,7 +394,7 @@ QDF.app = (function () {
     if (!form) return;
     e.preventDefault();
     var kind = form.getAttribute('data-form');
-    if (kind === 'add') addFromInput(false);
+    if (kind === 'add') addFromInput('end');
     else if (kind === 'quick-start') quickStart(form);
   }
 
@@ -376,7 +417,7 @@ QDF.app = (function () {
     var t = e.target;
     if (t.id === 'add-input' && e.key === 'Enter' && !e.isComposing) {
       e.preventDefault();
-      addFromInput(e.shiftKey);
+      addFromInput(e.ctrlKey || e.metaKey ? 'start' : e.shiftKey ? 'next' : 'end');
       return true;
     }
     if (t.getAttribute && t.getAttribute('data-edit')) {
@@ -543,6 +584,7 @@ QDF.app = (function () {
     });
 
     P.onChange(function (key) {
+      if (key === 'timers' || key === 'reset') { applyTimers(); tick(); }
       if (key === 'overview' || key === 'inspector' || key === 'reset') {
         applyDrawers();
         /* The timeline column changes width as a drawer slides; check the
@@ -556,9 +598,10 @@ QDF.app = (function () {
     S.load();
     $('brand-mark').innerHTML = V.brandMark('bm-bar');
     Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function (el) {
-      el.outerHTML = QDF.icon(el.getAttribute('data-icon'));
+      el.outerHTML = QDF.icon(el.getAttribute('data-icon'), el.className);
     });
     applyDrawers();
+    applyTimers();
     bind();
     render();
     var notice = S.takeNotice();

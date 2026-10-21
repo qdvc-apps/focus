@@ -12,15 +12,18 @@
 .timeline-scroll {
   position: absolute;
   inset: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
 }
 
+/* As wide as its columns, centred; scrolls sideways only if very many
+   tasks once ran at the same time. */
 .timeline {
   --node-y: 24px;
-  max-width: 880px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 520px;
   margin: 0 auto;
-  padding: 26px 48px 160px 40px;
+  padding: 26px 44px 160px 36px;
 }
 
 .tl-origin {
@@ -29,10 +32,10 @@
   color: var(--ink-faint);
 }
 
-.tl-row {
+/* Past and present: one grid. Columns and rows are set inline by the view. */
+.tl-grid {
   position: relative;
   display: grid;
-  grid-template-columns: 58px var(--graph-w) minmax(0, 1fr);
 }
 
 .tl-time {
@@ -46,16 +49,40 @@
   white-space: nowrap;
 }
 
+.tl-tick .tl-time { padding-top: 0; line-height: 10px; }
+.tl-tick-time { font-size: 10px; color: var(--ink-faint); }
+
 .tl-graph { position: relative; }
+
+/* Cards sit in their lane's column, spanning the rows they ran for. */
+.tl-grid > .tl-card,
+.tl-grid > .run-card {
+  position: relative;
+  z-index: 1;
+  margin: 6px 10px 6px 4px;
+}
+
+.lane-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 7px 1px 0;
+  border-radius: 50%;
+  background: var(--lc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
+}
+
+/* The queue: a plain list of rows, lining up with lane 0 above. */
+.tl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px var(--graph-w) var(--col-w);
+}
 
 .tl-body {
   min-width: 0;
-  padding: 6px 0 8px 4px;
+  padding: 6px 10px 8px 4px;
 }
-
-/* Rows whose card fills the row, so a longer stretch is a taller card. */
-.tl-fill .tl-body { display: flex; flex-direction: column; }
-.tl-fill .tl-card { flex: 1; }
 
 /* ---------------------------------------------------------------- lanes */
 
@@ -195,7 +222,6 @@
 
 .tl-card {
   position: relative;
-  max-width: 600px;
   padding: 8px 12px 9px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
@@ -286,53 +312,6 @@
 .tl-card:focus-within .tl-tools { opacity: 1; pointer-events: auto; }
 body.dragging-task .tl-tools { opacity: 0 !important; }
 
-/* ------------------------------------------------------ background rows */
-
-.tl-card-bg { max-width: 460px; }
-
-.tl-card-bg .tl-title::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin: 0 7px 1px 0;
-  border-radius: 50%;
-  background: var(--lc);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
-}
-
-.tl-bg-run {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-/* Indeterminate progress in the lane's colour: something is working, and
-   nobody knows how long it will take. */
-.pole-track {
-  flex: 1;
-  height: 9px;
-  overflow: hidden;
-  background: linear-gradient(var(--well-hi), var(--well-lo));
-  border-radius: 5px;
-  box-shadow: inset 0 1px 2px var(--shadow-deep), 0 1px 0 var(--sep-hi);
-}
-
-.pole {
-  height: 100%;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, .05) 55%, rgba(0, 0, 0, .1)),
-    repeating-linear-gradient(-45deg, var(--lc) 0 7px, color-mix(in srgb, var(--lc) 55%, #fff) 7px 14px);
-  background-size: 100% 100%, 19.8px 100%;
-  border-radius: 5px;
-  animation: pole 1.1s linear infinite;
-}
-
-@keyframes pole {
-  to { background-position: 0 0, 19.8px 0; }
-}
-
 /* ------------------------------------------------------- one-line rows */
 
 .tl-line {
@@ -347,17 +326,17 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
 
 .tl-line .icon { width: 13px; height: 13px; }
 .tl-line b { color: var(--ink-mid); }
-.tl-gap .tl-line { padding-top: 7px; font-style: italic; font-size: var(--fs-xs); }
+.tl-gap { padding-top: 7px; font-style: italic; font-size: var(--fs-xs); }
 
-.tl-day .tl-body {
+.tl-day {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 14px;
+  padding: 14px 10px 0 4px;
 }
 
-.tl-day-name { font-weight: 700; font-size: var(--fs-sm); color: var(--ink-mid); text-shadow: 0 1px 0 var(--emboss); }
-.tl-day-date { font-size: var(--fs-xs); color: var(--ink-dim); }
+.tl-day-name { font-weight: 700; font-size: var(--fs-sm); color: var(--ink-mid); text-shadow: 0 1px 0 var(--emboss); white-space: nowrap; }
+.tl-day-date { font-size: var(--fs-xs); color: var(--ink-dim); white-space: nowrap; }
 .tl-day .etched { flex: 1; }
 
 /* -------------------------------------------------------------- future */
@@ -376,7 +355,8 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
 .tl-future.drop-active::before {
   content: '';
   position: absolute;
-  inset: -4px -6px -4px calc(58px + var(--graph-w) - 2px);
+  inset: -4px auto -4px calc(58px + var(--graph-w) - 2px);
+  width: calc(var(--col-w) + 8px);
   border-radius: 10px;
   background: var(--accent-soft);
   pointer-events: none;
@@ -390,8 +370,7 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   content: '';
   position: absolute;
   left: calc(58px + var(--graph-w) + 4px);
-  right: 0;
-  max-width: 600px;
+  width: calc(var(--col-w) - 6px);
   top: -2px;
   height: 3px;
   border-radius: 2px;
@@ -411,6 +390,6 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   border: 2px solid #2f6fca;
 }
 
-.add-form { display: flex; gap: 6px; max-width: 600px; }
+.add-form { display: flex; gap: 6px; }
 .add-form .field { flex: 1; min-width: 0; }
 .add-hint { margin-top: 5px; font-size: var(--fs-xs); color: var(--ink-dim); }

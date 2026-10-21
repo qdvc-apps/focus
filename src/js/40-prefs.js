@@ -1,21 +1,22 @@
 /* ==========================================================================
-   40-prefs.js — interface preferences: colour theme and which drawers are
-   open. Kept apart from the task state (and out of the YAML), in their own
-   localStorage key.
+   40-prefs.js — interface preferences: colour theme, whether timers are
+   shown, and which drawers are open. Kept apart from the task state (and
+   out of the YAML), in their own localStorage key.
 
-   The theme is applied as soon as this file runs, before the page is first
-   painted, so a dark-mode user never sees a flash of the light theme.
+   The theme and the timers setting are applied as soon as this file runs,
+   before the page is first painted, so a dark-mode user never sees a flash
+   of the light theme and hidden timers never flash up.
    ========================================================================== */
 
 QDF.prefs = (function () {
   var THEMES = ['auto', 'light', 'dark'];
-  var DEFAULTS = { theme: 'auto', overview: false, inspector: false };
+  var DEFAULTS = { theme: 'auto', timers: true, overview: false, inspector: false };
   var p = copy(DEFAULTS);
   var mq = null;
   var listeners = [];
 
   function copy(o) {
-    return { theme: o.theme, overview: o.overview, inspector: o.inspector };
+    return { theme: o.theme, timers: o.timers, overview: o.overview, inspector: o.inspector };
   }
 
   function storage() {
@@ -29,6 +30,7 @@ QDF.prefs = (function () {
       if (raw) {
         var o = JSON.parse(raw);
         if (THEMES.indexOf(o.theme) !== -1) p.theme = o.theme;
+        p.timers = o.timers !== false;
         p.overview = !!o.overview;
         p.inspector = !!o.inspector;
       }
@@ -51,6 +53,7 @@ QDF.prefs = (function () {
   function apply() {
     if (typeof document === 'undefined' || !document.documentElement || !document.documentElement.setAttribute) return;
     document.documentElement.setAttribute('data-theme', effectiveTheme());
+    document.documentElement.setAttribute('data-timers', p.timers ? 'on' : 'off');
   }
 
   function get(key) { return p[key]; }
@@ -59,7 +62,7 @@ QDF.prefs = (function () {
     if (p[key] === value) return;
     p[key] = value;
     save();
-    if (key === 'theme') apply();
+    if (key === 'theme' || key === 'timers') apply();
     listeners.forEach(function (fn) { fn(key, value); });
   }
 

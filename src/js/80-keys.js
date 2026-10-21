@@ -35,6 +35,7 @@ QDF.keys = (function () {
       case '[': e.preventDefault(); A['toggle-overview'](); break;
       case ']': e.preventDefault(); A['toggle-inspector'](); break;
       case 'y': case 'Y': e.preventDefault(); QDF.transfer.showYaml(); break;
+      case 't': case 'T': e.preventDefault(); A['toggle-timers'](); break;
       case ',': e.preventDefault(); QDF.settings.show(); break;
       case '?': e.preventDefault(); QDF.settings.show('about'); break;
       case 'Escape': QDF.app.select(null); break;

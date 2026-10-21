@@ -3,19 +3,21 @@
 
    State:
      created, lastInteraction   ISO times
-     current                    the task in focus, or null
+     active                     tasks running now, in the order they started;
+                                any number can run in parallel
+     foreground                 id of the active task you are attending to,
+                                or null. A pointer, not history: changing it
+                                leaves every stretch untouched.
      queue                      tasks waiting; queue[0] is "up next"
-     background                 tasks something else is working on (a build,
-                                a render, an upload) while you do another
      done                       finished tasks, newest first
 
    Task:
      id, title, notes, created
-     stretches   every period the task spent in focus or in the background,
-                 oldest first: { kind: 'focus' | 'background', from, to }.
-                 `to` is null for the one open stretch: the last stretch of
-                 the current task (focus) or of a background task
-                 (background). Queued and done tasks have no open stretch.
+     stretches   every period the task was running, oldest first:
+                 { from, to }, with `to` null for the one still running.
+                 An active task's last stretch is open; queued and done
+                 tasks have none open. Stretches of different tasks may
+                 overlap freely: that is what working in parallel means.
      finished    set only while the task is in `done`
 
    Everything else (when it started, totals, the live stretch) is derived
@@ -33,9 +35,9 @@ QDF.model = (function () {
     return {
       created: U.iso(now),
       lastInteraction: U.iso(now),
-      current: null,
+      active: [],
+      foreground: null,
       queue: [],
-      background: [],
       done: []
     };
   }
@@ -58,10 +60,9 @@ QDF.model = (function () {
     };
   }
 
-  var LISTS = ['queue', 'background', 'done'];
+  var LISTS = ['active', 'queue', 'done'];
 
   function find(s, id) {
-    if (s.current && s.current.id === id) return { list: 'current', index: 0, item: s.current };
     for (var n = 0; n < LISTS.length; n++) {
       var list = s[LISTS[n]];
       for (var k = 0; k < list.length; k++) {
@@ -71,43 +72,49 @@ QDF.model = (function () {
     return null;
   }
 
-  function detach(s, loc) {
-    if (loc.list === 'current') s.current = null;
-    else s[loc.list].splice(loc.index, 1);
+  /* -------------------------------------------------------- foreground */
+
+  function foreground(s) {
+    if (!s.active.length) return null;
+    for (var k = 0; k < s.active.length; k++) if (s.active[k].id === s.foreground) return s.active[k];
+    return s.active[s.active.length - 1];
+  }
+
+  /* When the foreground task leaves, attention passes to the task started
+     most recently among those still running. */
+  function settleForeground(s) {
+    var fg = foreground(s);
+    s.foreground = fg ? fg.id : null;
+  }
+
+  function setForeground(s, id) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'active' || s.foreground === id) return null;
+    s.foreground = id;
+    return loc.item;
   }
 
   /* ---------------------------------------------------------- stretches */
 
   function openStretch(item) {
-    var st = item.stretches, last = st[st.length - 1];
+    var last = item.stretches[item.stretches.length - 1];
     return last && !last.to ? last : null;
   }
 
-  function begin(item, kind, now) {
-    item.stretches.push({ kind: kind, from: U.iso(now), to: null });
-  }
-
-  function end(item, now) {
-    var open = openStretch(item);
+  /* Take a task off whatever list it is on and close its running stretch. */
+  function detach(s, loc, now) {
+    s[loc.list].splice(loc.index, 1);
+    var open = openStretch(loc.item);
     if (open) open.to = U.iso(now);
-    return open;
+    if (loc.list === 'active') settleForeground(s);
+    return loc.item;
   }
 
-  function focus(s, item, now) {
-    begin(item, 'focus', now);
-    s.current = item;
-  }
-
-  /* Takes the current task out of focus and back into the queue, at the
-     front (as up next) or at the end. */
-  function suspend(s, now, where) {
-    var c = s.current;
-    if (!c) return null;
-    end(c, now);
-    s.current = null;
-    if (where === 'end') s.queue.push(c);
-    else s.queue.unshift(c);
-    return c;
+  function run(s, item, now) {
+    item.stretches.push({ from: U.iso(now), to: null });
+    s.active.push(item);
+    s.foreground = item.id;
+    return item;
   }
 
   /* ------------------------------------------------------------ creating */
@@ -120,14 +127,10 @@ QDF.model = (function () {
     return item;
   }
 
-  /* Creates a task and focuses it at once. Whatever was current becomes up
-     next, so nothing is lost. */
+  /* Creates a task and starts it at once, alongside anything running. */
   function addAndStart(s, title, notes, now) {
     if (!cleanTitle(title)) return null;
-    var item = newItem(title, notes, now);
-    var previous = suspend(s, now, 'front');
-    focus(s, item, now);
-    return { item: item, previous: previous };
+    return run(s, newItem(title, notes, now), now);
   }
 
   function edit(s, id, fields) {
@@ -145,69 +148,58 @@ QDF.model = (function () {
     return changed ? item : null;
   }
 
-  /* ----------------------------------------------------------- focusing */
+  /* ------------------------------------------------------------ running */
 
-  /* Brings a queued or background task into focus. The task that was in
-     focus goes back to the front of the queue. */
+  /* Starts a queued task alongside whatever is already running, and puts
+     it in the foreground. Nothing else stops. */
   function start(s, id, now) {
     var loc = find(s, id);
-    if (!loc || loc.list === 'current' || loc.list === 'done') return null;
-    detach(s, loc);
-    end(loc.item, now);
-    var previous = suspend(s, now, 'front');
-    focus(s, loc.item, now);
-    return { item: loc.item, from: loc.list, previous: previous };
+    if (!loc || loc.list !== 'queue') return null;
+    detach(s, loc, now);
+    return run(s, loc.item, now);
+  }
+
+  function startNext(s, now) {
+    return s.queue.length ? start(s, s.queue[0].id, now) : null;
   }
 
   function finish(s, id, now) {
     var loc = find(s, id);
-    if (!loc || (loc.list !== 'current' && loc.list !== 'background')) return null;
-    detach(s, loc);
-    end(loc.item, now);
-    loc.item.finished = U.iso(now);
-    s.done.unshift(loc.item);
-    return loc.item;
+    if (!loc || loc.list !== 'active') return null;
+    var item = detach(s, loc, now);
+    item.finished = U.iso(now);
+    s.done.unshift(item);
+    return item;
   }
 
-  /* "Move on": the current task is done and up next comes into focus. */
-  function finishAndNext(s, now) {
-    if (!s.current) return null;
-    var done = finish(s, s.current.id, now);
-    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
-    return { done: done, next: next };
+  /* "Move on": this task is done and up next starts in its place. */
+  function finishAndNext(s, id, now) {
+    var done = finish(s, id, now);
+    if (!done) return null;
+    return { done: done, next: startNext(s, now) };
   }
 
-  /* The current task carries on without you; up next comes into focus. */
-  function toBackground(s, now) {
-    var c = s.current;
-    if (!c) return null;
-    end(c, now);
-    begin(c, 'background', now);
-    s.background.push(c);
-    s.current = null;
-    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
-    return { sent: c, next: next };
-  }
-
-  /* Out of focus, back to the queue; nothing else is started. */
-  function pause(s, now, where) {
-    return suspend(s, now, where === 'end' ? 'end' : 'front');
-  }
-
-  function swapWithNext(s, now) {
-    if (!s.current || !s.queue.length) return null;
-    return start(s, s.queue[0].id, now);
-  }
-
-  /* A background task whose machine has finished, but which you will deal
-     with later, goes back to the queue as up next. */
-  function backgroundToQueue(s, id, now) {
+  /* Stop running a task without finishing it: back to the queue, at the
+     front (as up next) or at the end. */
+  function pause(s, id, now, where) {
     var loc = find(s, id);
-    if (!loc || loc.list !== 'background') return null;
-    detach(s, loc);
-    end(loc.item, now);
-    s.queue.unshift(loc.item);
-    return loc.item;
+    if (!loc || loc.list !== 'active') return null;
+    var item = detach(s, loc, now);
+    if (where === 'end') s.queue.push(item);
+    else s.queue.unshift(item);
+    return item;
+  }
+
+  /* Pause this task and start up next instead. */
+  function swapWithNext(s, id, now) {
+    if (!s.queue.length) return null;
+    var next = s.queue[0];
+    var paused = pause(s, id, now, 'end');
+    if (!paused) return null;
+    s.queue.pop();
+    s.queue.splice(1, 0, paused);
+    var started = start(s, next.id, now);
+    return { paused: paused, started: started };
   }
 
   /* -------------------------------------------------------------- order */
@@ -247,14 +239,15 @@ QDF.model = (function () {
   function remove(s, id) {
     var loc = find(s, id);
     if (!loc) return null;
-    detach(s, loc);
+    s[loc.list].splice(loc.index, 1);
+    if (loc.list === 'active') settleForeground(s);
     return loc.item;
   }
 
   function restore(s, id) {
     var loc = find(s, id);
     if (!loc || loc.list !== 'done') return null;
-    detach(s, loc);
+    s.done.splice(loc.index, 1);
     delete loc.item.finished;
     s.queue.push(loc.item);
     return loc.item;
@@ -283,17 +276,14 @@ QDF.model = (function () {
     return first ? U.secondsSince(first, now) : 0;
   }
 
-  function total(item, kind, now) {
+  /* Total time the task has been running, across all its stretches. */
+  function total(item, now) {
     var sum = 0;
-    item.stretches.forEach(function (st) { if (st.kind === kind) sum += duration(st, now); });
+    item.stretches.forEach(function (st) { sum += duration(st, now); });
     return sum;
   }
 
-  function focusTotal(item, now) { return total(item, 'focus', now); }
-  function backgroundTotal(item, now) { return total(item, 'background', now); }
-
-  /* The live stretch: how long since it came into focus (or went into the
-     background) this time round. */
+  /* The live stretch: how long since it was last started. */
   function live(item, now) {
     var open = openStretch(item);
     return open ? duration(open, now) : 0;
@@ -315,14 +305,13 @@ QDF.model = (function () {
 
   return {
     newState: newState, newItem: newItem, find: find, openStretch: openStretch,
+    foreground: foreground, setForeground: setForeground,
     add: add, addAndStart: addAndStart, edit: edit,
-    start: start, finish: finish, finishAndNext: finishAndNext,
-    toBackground: toBackground, pause: pause, swapWithNext: swapWithNext,
-    backgroundToQueue: backgroundToQueue,
+    start: start, startNext: startNext, finish: finish, finishAndNext: finishAndNext,
+    pause: pause, swapWithNext: swapWithNext,
     move: move, makeNext: makeNext, moveBefore: moveBefore,
     remove: remove, restore: restore, clearDone: clearDone,
-    duration: duration, started: started, elapsed: elapsed,
-    focusTotal: focusTotal, backgroundTotal: backgroundTotal, live: live,
+    duration: duration, started: started, elapsed: elapsed, total: total, live: live,
     span: span, idle: idle, upNext: upNext
   };
 })();

@@ -1,26 +1,41 @@
 /* ==========================================================================
-   45-present.css — the present: the card for the task in focus, with its
-   glass-fronted clock, and the "now" line drawn across the timeline.
+   45-present.css — the present: running cards (with the glass-fronted clock
+   on the one in the foreground), the "now" line drawn across the timeline,
+   and hiding timers.
    ========================================================================== */
 
-.present-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 188px;
-  max-width: 640px;
+/* A running card reaches from when the task started down to the now line.
+   Its title sticks to the top of the view and its controls to the bottom,
+   so however long it has run, both stay in reach. */
+.run-card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  min-height: 132px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
-  border-radius: 12px;
-  box-shadow: inset 0 1px 0 var(--shine), 0 2px 3px var(--shadow), 0 10px 26px var(--shadow);
+  border-radius: 11px;
+  box-shadow: inset 0 1px 0 var(--shine), 0 2px 3px var(--shadow), 0 8px 20px var(--shadow);
   cursor: pointer;
 }
 
-.pc-main {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 9px 14px 14px 14px;
+.run-card.is-foreground {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--shine), 0 0 0 3px var(--accent-soft), 0 2px 3px var(--shadow), 0 12px 28px var(--shadow);
+}
+
+.run-card.is-selected:not(.is-foreground) {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--shine), 0 0 0 3px var(--accent-soft), 0 2px 3px var(--shadow);
+}
+
+.run-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 9px 12px 6px;
+  background: linear-gradient(var(--card-hi), color-mix(in srgb, var(--card-hi) 70%, var(--card-lo)));
+  border-radius: 10px 10px 0 0;
 }
 
 .eyebrow {
@@ -30,47 +45,67 @@
   height: 18px;
 }
 
-.pc-title {
-  font-size: 21px;
+.run-title {
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -.01em;
   overflow-wrap: anywhere;
 }
 
-.pc-notes {
+.is-foreground .run-title { font-size: 18px; }
+
+.run-notes {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 0 12px 6px;
   font-size: var(--fs-md);
   white-space: pre-wrap;
   color: var(--ink-mid);
 }
 
-.pc-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.pc-side {
+.run-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 8px;
-  padding: 12px;
-  background: linear-gradient(var(--well-lo), var(--well-hi));
-  border-left: 1px solid var(--sep);
-  border-radius: 0 11px 11px 0;
-  box-shadow: inset 1px 0 0 var(--sep-hi), inset 0 1px 3px var(--shadow);
+  margin-top: auto;
+  padding: 10px 12px 12px;
+  background: linear-gradient(color-mix(in srgb, var(--card-lo) 80%, var(--card-hi)), var(--card-lo));
+  border-top: 1px solid var(--sep);
+  border-radius: 0 0 10px 10px;
+  box-shadow: inset 0 1px 0 var(--sep-hi);
+}
+
+.run-time { font-size: var(--fs-sm); color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.run-actions .btn { height: 28px; padding: 0 10px; font-size: 12.5px; gap: 5px; }
+.run-actions .btn-icon { width: 30px; padding: 0; }
+/* The menu stays on the first row beside the main button; a second
+   button wraps below if the card is narrow. */
+.run-actions [data-act="task-menu"] { order: 1; }
+.run-actions [data-act="start-next"] { order: 2; }
+
+/* In a narrow card the secondary labels give way to their icons. */
+@container (max-width: 250px) {
+  .run-actions .narrow-hide { display: none; }
+  .run-actions [data-act="foreground"] { width: 30px; padding: 0; }
 }
 
 .clock-face {
   position: relative;
   overflow: hidden;
-  padding: 9px 10px 8px;
+  padding: 7px 10px 6px;
   text-align: center;
   color: var(--glass-ink);
   background: linear-gradient(var(--glass-hi), var(--glass-lo));
@@ -101,7 +136,7 @@
 }
 
 .clock-digits {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 300;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -113,6 +148,7 @@
   display: grid;
   grid-template-columns: auto auto;
   gap: 2px 8px;
+  margin: 0;
   padding: 0 2px;
   font-size: 11.5px;
 }
@@ -129,18 +165,26 @@
   animation: breathe 2.4s ease-in-out infinite;
 }
 
-/* While a task is dragged, the present says it can take it. */
+.live-lamp.is-dim {
+  background: radial-gradient(circle at 35% 30%, #e3f1ff, #6aa0dc 55%, #3c6ea8);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .25);
+  animation: none;
+}
+
+/* While a task is dragged, anything that can start it says so. */
 .drop-hint { display: none; }
 
-body.dragging-task [data-drop="now"] .drop-hint {
+body.dragging-task [data-drop="now"] > .drop-hint,
+body.dragging-task .now-empty > .drop-hint {
   position: absolute;
   inset: 6px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  text-align: center;
   color: var(--accent-ink);
   background: color-mix(in srgb, var(--card-hi) 86%, transparent);
   border-radius: 9px;
@@ -148,19 +192,24 @@ body.dragging-task [data-drop="now"] .drop-hint {
   pointer-events: none;
 }
 
-[data-drop="now"].drop-active .drop-hint {
+[data-drop="now"].drop-active > .drop-hint,
+[data-drop="now"].drop-active .now-empty > .drop-hint {
   box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 4px var(--accent-soft) !important;
 }
 
 /* ------------------------------------------------------------ now line */
 
-.tl-now { min-height: 44px; }
-
 /* A calendar-style line across the whole timeline at the present moment. */
-.tl-now::before {
+.tl-nowline {
+  position: relative;
+  z-index: 1;
+  padding-left: calc(var(--graph-w) + 4px);
+}
+
+.tl-nowline::before {
   content: '';
   position: absolute;
-  left: 52px;
+  left: -6px;
   right: 0;
   top: calc(var(--node-y) - 1px);
   height: 2px;
@@ -169,10 +218,10 @@ body.dragging-task [data-drop="now"] .drop-hint {
   pointer-events: none;
 }
 
-.tl-now::after {
+.tl-nowline::after {
   content: '';
   position: absolute;
-  left: 48px;
+  left: -10px;
   top: calc(var(--node-y) - 5px);
   width: 10px;
   height: 10px;
@@ -181,7 +230,7 @@ body.dragging-task [data-drop="now"] .drop-hint {
   box-shadow: 0 0 0 2px var(--desk-top);
 }
 
-.tl-now .tl-time {
+.tl-now.tl-time {
   padding-right: 16px;
   font-weight: 700;
   color: var(--now-line);
@@ -191,7 +240,7 @@ body.dragging-task [data-drop="now"] .drop-hint {
   position: relative;
   z-index: 1;
   display: inline-block;
-  margin-top: 8px;
+  margin-top: 16px;
   padding: 1px 9px;
   font-size: 10.5px;
   font-weight: 700;
@@ -215,11 +264,11 @@ body.dragging-task [data-drop="now"] .drop-hint {
   animation: lane-ring 1.8s ease-out infinite;
 }
 
-/* Nothing in focus: the now row opens into a small panel. */
+/* Nothing running: the now line opens into a small panel. */
 .now-empty {
   position: relative;
-  max-width: 600px;
-  margin-top: 12px;
+  max-width: 520px;
+  margin: 12px 0 8px;
   padding: 14px 16px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
@@ -230,3 +279,39 @@ body.dragging-task [data-drop="now"] .drop-hint {
 .now-empty-title { font-size: 17px; font-weight: 300; color: var(--ink-mid); }
 .now-empty-text { margin: 4px 0 12px; color: var(--ink-dim); }
 .now-empty .btn-go { margin-bottom: 12px; }
+
+/* ------------------------------------------------------- hiding timers */
+
+/* Timers can be stressful. With them off, anything that counts is hidden,
+   and a calm stand-in shows where one is needed. Past durations stay: they
+   are history, not a clock running. */
+.timer-alt { display: none; }
+html[data-timers="off"] .timer { display: none !important; }
+html[data-timers="off"] .timer-alt { display: block; }
+html[data-timers="off"] .idle-calm.timer-alt { display: flex; }
+
+.toolbar-centre { display: flex; align-items: center; gap: 8px; }
+
+.idle-calm {
+  align-items: center;
+  justify-content: center;
+  width: 250px;
+  height: 34px;
+  font-size: var(--fs-sm);
+  font-style: italic;
+  color: var(--lcd-dim);
+  background: linear-gradient(var(--lcd-hi), var(--lcd-lo));
+  border: 1px solid var(--lcd-edge);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 4px var(--shadow), 0 1px 0 var(--sep-hi);
+}
+
+.tbtn-toggle .when-off { display: none; }
+.tbtn-toggle[aria-pressed="true"] .when-on { display: none; }
+.tbtn-toggle[aria-pressed="true"] .when-off { display: block; }
+
+/* Pressed in while timers are hidden. */
+.tbtn-toggle[aria-pressed="true"] {
+  background: linear-gradient(var(--btn-press-1), var(--btn-press-2));
+  box-shadow: inset 0 1px 3px var(--shadow-deep);
+}

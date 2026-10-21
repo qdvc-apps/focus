@@ -7,8 +7,9 @@ checklist to run before you commit.
 ## 1. What this is
 
 A single static HTML page that draws your working day as a vertical timeline
-— past at the top, the present in the middle, the queue below — with work
-handed to machines drawn as branches beside the main line, like a Git graph.
+— past at the top, the present in the middle, the queue below. Tasks can run
+in parallel; overlapping work is laid out side by side in lanes that fork and
+join like a Git graph.
 No runtime dependencies. Data lives in `localStorage` and moves in and out as
 one YAML document. Roughly 3,500 lines of ES5-flavoured JavaScript and 2,000
 of CSS in numbered fragments, concatenated by a short shell script.
@@ -31,21 +32,27 @@ defect even if everything still works.
    left, inspector right) and in the settings window. Data tools — import,
    export, reset — are in settings, not the toolbar. Think twice before adding
    anything that is always visible.
-6. **Not flat.** Surfaces are lit from above, wells are sunk, controls are
+6. **Parallel, without ceremony.** Any number of tasks can run at once; none
+   is "backgrounded". The foreground is a pointer you move freely, and it is
+   never written into the history.
+7. **Timers can be hidden** from the toolbar (`T`). Anything that counts live
+   must carry the `timer` class so it hides, with a `timer-alt` stand-in where
+   a blank would confuse.
+8. **Not flat.** Surfaces are lit from above, wells are sunk, controls are
    bevelled — in both themes. Do not replace gradients and shadows with flat
    fills.
-7. **No stock "AI" decoration**: no coloured accent stripe down the left edge
+9. **No stock "AI" decoration**: no coloured accent stripe down the left edge
    of a box, no gradient text, no glassmorphism blur, no emoji in headings.
-8. **Font stack**: `"Helvetica Neue", Helvetica, Arial, sans-serif`, set once
+10. **Font stack**: `"Helvetica Neue", Helvetica, Arial, sans-serif`, set once
    as `--font` in `00-tokens.css`. Monospace only for the YAML view and import.
-9. **Light, dark and auto themes.** Every colour is a token in `00-tokens.css`
+11. **Light, dark and auto themes.** Every colour is a token in `00-tokens.css`
    with a value for each theme. Fixed hues are allowed only where the meaning
    is the same in both (the green "done" button, the blue selection).
-10. **Desktop first.** A phone layout is a separate, future piece of work.
-11. **The state is viewable, exportable and importable as YAML**, per
+12. **Desktop first.** A phone layout is a separate, future piece of work.
+13. **The state is viewable, exportable and importable as YAML**, per
     `paperwork/STATE-FORMAT.md`. **Reset app** removes every localStorage key
     starting with `qdvc-focus.` and nothing else.
-12. **`docs/` is committed** and must match `src/`.
+14. **`docs/` is committed** and must match `src/`.
 
 ## 3. Architecture
 
@@ -66,18 +73,27 @@ user action ──▶ QDF.app ACTIONS ──▶ QDF.store.commit(label, fn)
 ```
 
 - **`20-model.js`** is pure. A task's history is its list of stretches;
-  operations open and close them (`begin`/`end`). Every operation takes the
+  starting appends an open one, stopping (finish, pause) closes it. Running
+  tasks live in `active`; `foreground` points at one of them and is moved with
+  `setForeground`, which touches no stretch. Every operation takes the
   state and `now` in milliseconds and returns something truthy when anything
   changed, `null` when nothing did; the store relies on that `null` to avoid
   recording no-ops as undo steps.
 - **`25-store.js`** never mutates a state in place. Undo is swapping an older
   object back, so nothing else may hold on to and mutate `store.get()`.
-- **`35-timeline.js`** is the layout engine, and pure: state in, rows out. It
-  decides row order, which lane each background stretch takes (the lowest
-  free one), where branches fork and merge, where gaps go, the style of the
-  main line in every row, and each row's height hint. `tools/test-timeline.mjs`
+  `store.quiet(fn)` applies a change without an undo step; it is used for
+  moving the foreground.
+- **`35-timeline.js`** is the layout engine, and pure: state in, rows out.
+  Rows are the moments something started or ended. Each stretch takes the
+  lowest lane free when it starts, and its card spans from its start row to
+  the row where it ended (running ones to the now row). The engine also
+  decides forks, merges, gaps, day breaks, the dashed "nothing running" line,
+  card height hints and the card width (narrower as more lanes are used). `tools/test-timeline.mjs`
   pins its rules down; change them there first.
-- **`60-timeline-view.js`** draws those rows. The graph is drawn per row:
+- **`60-timeline-view.js`** draws those rows as one CSS grid — time, graph,
+  then a column per lane — with each card placed by `grid-row` and
+  `grid-column`. The queue below is a separate list of rows, so dragging to
+  reorder stays simple. The graph is drawn per row:
   lines are bars anchored to the top or bottom of the row, forks and merges
   are fixed-height SVG curves between the row edge and the node, and the node
   sits `QDF.GEOM.nodeY` from the top (the CSS uses the same 24px as
@@ -89,8 +105,12 @@ user action ──▶ QDF.app ACTIONS ──▶ QDF.store.commit(label, fn)
   `<span data-tick="…" data-from="…" data-base="…">` from `QDF.view.tick`.
   `QDF.app.tick()` refreshes their text twice a second without re-rendering,
   so a drag or a scroll is never interrupted. Do not re-render on a timer.
+- **Running cards** span from their start down to the now line. Their title
+  and controls are `position: sticky`, so a card that has run for hours stays
+  usable. A container query collapses secondary button labels in narrow
+  cards.
 - **Keeping now in place.** Before a render the controller notes where the
-  present is in the viewport; after it, it scrolls by the difference, so
+  now line is in the viewport; after it, it scrolls by the difference, so
   finishing a task (which adds a row above) does not make the page jump. If
   the present was off screen — you were reading history — the scroll position
   is left alone. The jump pill appears whenever the present is out of view.
@@ -110,9 +130,9 @@ user action ──▶ QDF.app ACTIONS ──▶ QDF.store.commit(label, fn)
 ## 4. Invariants
 
 - `queue[0]` is up next. There is no separate field for it.
-- Only the last stretch of a task can be open: a focus stretch on `current`,
-  a background stretch on a `background` task. Queued and done tasks have
-  none. The model maintains this; the importer enforces it.
+- Only the last stretch of a task can be open, and only tasks in `active`
+  have one. The model maintains this; the importer enforces it.
+- `foreground` is the id of a task in `active`, or null when nothing runs.
 - `finished` exists only on tasks in `done`.
 - Export → import → export is byte-identical (apart from `saved`).
   `test-core.mjs` and `test-example.mjs` check it.
@@ -127,6 +147,8 @@ user action ──▶ QDF.app ACTIONS ──▶ QDF.store.commit(label, fn)
   changes state, go through `commit` with a short label; the label is what
   Undo shows.
 - **A new shortcut**: `80-keys.js` and the table in `70-settings.js`.
+- **A new live counter**: give its wrapper the `timer` class (and a
+  `timer-alt` stand-in if needed) so Hide timers covers it.
 - **A colour**: `00-tokens.css`, in both the light and the dark block.
 - **A timeline rule** (ordering, lanes, outcomes): `35-timeline.js`, with a
   case in `test-timeline.mjs`.
@@ -138,6 +160,7 @@ sh tools/test-all.sh
 ```
 
 Then open `docs/index.html` and, at minimum: add three tasks, drag one to the
-top of the queue, start it, send it to the background, finish the next one,
-bring the background task forward, undo, scroll up and jump back to now, open
-both drawers, switch the theme, export the YAML and import it back.
+top of the queue, start it, start the next one alongside, move the foreground
+between them, finish one, undo, hide and show timers, scroll up and jump back
+to now, open both drawers, switch the theme, export the YAML and import it
+back.

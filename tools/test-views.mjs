@@ -22,24 +22,31 @@ function states() {
   out.queuedNothingInFocus = queued;
 
   const busy = M.newState(T0 - 3 * 86400000);
-  ['a', 'b', 'c', 'd', 'e'].forEach((n, k) => M.add(busy, 'Task ' + n, k % 2 ? 'note ' + n + '\nsecond line' : '', null, T0 - 3 * 86400000));
+  ['a', 'b', 'c', 'd', 'e', 'f'].forEach((n, k) => M.add(busy, 'Task ' + n, k % 2 ? 'note ' + n + '\nsecond line' : '', null, T0 - 3 * 86400000));
   let now = T0 - 2 * 86400000;
   M.start(busy, busy.queue[0].id, now);
-  M.finishAndNext(busy, now += 40 * MIN);
-  M.toBackground(busy, now += 5 * MIN);
+  M.finishAndNext(busy, busy.active[0].id, now += 40 * MIN);
+  M.startNext(busy, now += 5 * MIN);
   now = T0 - 60 * MIN;
-  M.finishAndNext(busy, now);
-  M.toBackground(busy, now += 3 * MIN);
-  M.finish(busy, busy.background[0].id, now += 2 * MIN);
+  M.finishAndNext(busy, busy.active[0].id, now);
+  M.startNext(busy, now += 3 * MIN);
+  M.finish(busy, busy.active[0].id, now += 2 * MIN);
+  M.pause(busy, busy.active[0].id, now += MIN, 'end');
   out.busy = busy;
+
+  const parallel = M.newState(T0);
+  ['p', 'q', 'r', 's', 't'].forEach(n => M.add(parallel, 'Parallel ' + n, '', null, T0));
+  for (let k = 0; k < 4; k++) M.startNext(parallel, T0 + k * MIN);
+  M.setForeground(parallel, parallel.active[1].id);
+  out.parallel = parallel;
 
   const hostile = M.newState(T0);
   M.add(hostile, HOSTILE, HOSTILE, null, T0);
   M.add(hostile, HOSTILE, HOSTILE, null, T0);
   M.add(hostile, HOSTILE, HOSTILE, null, T0);
-  M.start(hostile, hostile.queue[0].id, T0);
-  M.toBackground(hostile, T0 + MIN);
-  M.finishAndNext(hostile, T0 + 2 * MIN);
+  M.startNext(hostile, T0);
+  M.startNext(hostile, T0 + MIN);
+  M.finishAndNext(hostile, hostile.active[0].id, T0 + 2 * MIN);
   M.add(hostile, HOSTILE, HOSTILE, null, T0);
   out.hostile = hostile;
 
@@ -70,12 +77,12 @@ function balanced(html) {
 
 function views(s, now) {
   const tl = QDF.timeline.build(s, now);
-  const firstId = (s.current || s.queue[0] || s.done[0] || s.background[0] || {}).id;
+  const firstId = (s.active[0] || s.queue[0] || s.done[0] || {}).id;
   return {
     timeline: V.timeline(tl, s, now, { selectedId: firstId }),
     overview: V.overview(s, now),
     inspectorEmpty: V.inspector(s, now, null),
-    ...Object.fromEntries([s.current, ...s.queue, ...s.background, ...s.done].filter(Boolean)
+    ...Object.fromEntries([...s.active, ...s.queue, ...s.done]
       .map((item, k) => ['inspector' + k, V.inspector(s, now, item.id)])),
     idle: V.idle(s, now)
   };
@@ -114,6 +121,29 @@ t.check('the present card shows the clock from first start', () => {
   t.ok(html.includes('>1:02:03<'), 'clock text');
   t.ok(html.includes('data-tick="clock"'), 'clock ticks');
   t.ok(html.includes('id="tl-present"') && html.includes('id="tl-now"'), 'anchors for jump to now');
+});
+
+t.check('tasks running together are placed side by side, one in the foreground', () => {
+  const s = states().parallel;
+  const now = T0 + 10 * MIN;
+  const html = V.timeline(QDF.timeline.build(s, now), s, now, {});
+  const cards = [...html.matchAll(/class="run-card([^"]*)" style="grid-row:(\d+)\/(\d+);grid-column:(\d+)"/g)];
+  t.eq(cards.length, 4);
+  t.eq(cards.map(c => c[4]).sort(), ['3', '4', '5', '6'], 'one column each');
+  t.ok(new Set(cards.map(c => c[3])).size === 1, 'all reach down to the same now row');
+  t.eq(cards.filter(c => c[1].includes('is-foreground')).length, 1, 'exactly one in the foreground');
+  t.ok(html.includes('data-act="foreground"'), 'the others can be brought forward');
+});
+
+t.check('every running clock can be hidden, and has a calm stand-in', () => {
+  const s = states().parallel;
+  const now = T0 + 10 * MIN;
+  const html = V.timeline(QDF.timeline.build(s, now), s, now, {}) + V.idle(s, now);
+  t.ok(/class="clock-face timer"/.test(html), 'the foreground clock');
+  t.ok(/class="pc-stats timer"/.test(html), 'its stats');
+  t.ok(/class="run-time timer"/.test(html), 'the running time on the others');
+  t.ok(/class="idle-chip timer"/.test(html), 'since last update');
+  t.ok(/timer-alt/.test(html), 'stand-ins exist');
 });
 
 t.check('the timeline marks the selected card and only that one', () => {

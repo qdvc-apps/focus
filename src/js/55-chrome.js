@@ -36,7 +36,8 @@ QDF.view.idleLevel = function (sec) {
 
 QDF.view.idle = function (s, now) {
   var sec = QDF.model.idle(s, now);
-  return '<button type="button" class="idle-chip" id="idle-chip" data-act="check-in" data-level="' +
+  return '<span class="idle-calm timer-alt">Timers are hidden</span>' +
+    '<button type="button" class="idle-chip timer" id="idle-chip" data-act="check-in" data-level="' +
       QDF.view.idleLevel(sec) + '" title="Time since you last changed anything here. Click to check in without changing anything.">' +
     '<span class="idle-lamp" aria-hidden="true"></span>' +
     '<span class="idle-text">' +

@@ -96,9 +96,9 @@ QDF.transfer = (function () {
 
   function summary(st) {
     var bits = [];
-    bits.push(st.current ? '“' + st.current.title + '” in focus' : 'nothing in focus');
+    var fg = QDF.model.foreground(st);
+    bits.push(st.active.length ? U.plural(st.active.length, 'task') + ' running' + (fg ? ' (“' + fg.title + '” in the foreground)' : '') : 'nothing running');
     bits.push(U.plural(st.queue.length, 'queued', 'queued'));
-    bits.push(st.background.length + ' in background');
     bits.push(st.done.length + ' done');
     return bits.join(', ');
   }

@@ -1,6 +1,7 @@
-/* The timeline layout engine: row order, lanes, forks and merges, gaps,
-   day breaks, line styles and height hints. These are the rules that make
-   the graph read like a Git history, so they are pinned down here. */
+/* The timeline layout engine: rows at every start and end, lanes for tasks
+   that ran together, cards spanning the rows they ran for, forks and merges,
+   gaps, day breaks and height hints. These are the rules that make the graph
+   read like a Git history, so they are pinned down here. */
 import { load, suite } from './harness.mjs';
 
 const T0 = Date.parse('2026-10-21T09:00:00Z');
@@ -9,27 +10,35 @@ const t = suite('test-timeline');
 const QDF = load();
 const M = QDF.model, TL = QDF.timeline;
 
-/* A compact picture of the rows: type, title, lane, and graph details. */
+const byTitle = (s, n) => [...s.active, ...s.queue, ...s.done].find(x => x.title === n);
+
+/* Rows as short strings: type, title, lane and graph details. */
 function sketch(tl) {
   return tl.rows.filter(r => r.type !== 'day').map(r => {
-    let s = r.type + (r.item ? ':' + r.item.title : '') + '@' + r.lane;
-    if (r.mergeLane) s += ' merge' + r.mergeLane;
-    if (r.endLanes && r.endLanes.length) s += ' end' + r.endLanes.join(',');
-    if (r.outcome) s += ' ' + r.outcome;
+    let s = r.type + (r.seg ? ':' + r.seg.item.title + '@' + r.lane : '');
+    if (r.fork !== null && r.fork !== undefined) s += ' fork' + r.fork;
+    r.merges.forEach(m => { s += ' merge' + m.from + '>' + m.to; });
+    if (r.caps.length) s += ' caps' + r.caps.join(',');
     return s;
   });
 }
 
+function cards(tl) {
+  const rowAt = i => tl.rows[i].type === 'day' ? 'day' : tl.rows[i].type;
+  return tl.segs.map(sg => sg.item.title + '@' + sg.lane + ' ' + rowAt(sg.startRow) + '→' + rowAt(sg.endRow));
+}
+
+/* A morning with some parallel work in it. */
 function morning() {
   let now = T0;
   const s = M.newState(now);
   ['Triage', 'Docker', 'Plan', 'Review', 'Vendor'].forEach(n => M.add(s, n, '', null, now));
-  M.start(s, s.queue[0].id, now); now += 35 * MIN;
-  M.finishAndNext(s, now); now += 15 * MIN;          /* Docker in focus */
-  M.toBackground(s, now); now += 20 * MIN;           /* Docker builds; Plan in focus */
-  M.toBackground(s, now); now += 10 * MIN;           /* Plan in background; Review in focus */
-  M.finish(s, s.background[0].id, now); now += 5 * MIN;   /* Docker finished in background */
-  M.start(s, s.background[0].id, now); now += 3 * MIN;    /* Plan brought forward */
+  M.start(s, byTitle(s, 'Triage').id, now); now += 35 * MIN;
+  M.finishAndNext(s, byTitle(s, 'Triage').id, now); now += 15 * MIN;   /* Docker running */
+  M.startNext(s, now); now += 20 * MIN;                               /* Plan alongside Docker */
+  M.finish(s, byTitle(s, 'Docker').id, now); now += 10 * MIN;         /* Docker done, Plan carries on */
+  M.startNext(s, now); now += 5 * MIN;                                /* Review alongside Plan */
+  M.pause(s, byTitle(s, 'Plan').id, now, 'end'); now += 3 * MIN;     /* Plan back to the queue */
   return { s, now };
 }
 
@@ -37,111 +46,136 @@ t.check('a morning reads like a Git graph', () => {
   const { s, now } = morning();
   const tl = TL.build(s, now);
   t.eq(sketch(tl), [
-    'focus:Triage@0 done',
-    'focus:Docker@0 background',
-    'bg:Docker@1',
-    'focus:Plan@0 background',
-    'bg:Plan@2',
-    'focus:Review@0 paused',
-    'bgEnd:Docker@1 done',
-    'present:Plan@0 merge2',
-    'now@0',
-    'future:Review@0',
-    'future:Vendor@0',
-    'add@0'
+    'start:Triage@0',
+    'start:Docker@0',
+    'start:Plan@1 fork0',
+    'tick merge0>1',
+    'start:Review@0 fork1',
+    'tick merge1>0',
+    'now caps0'
   ]);
-  t.eq(tl.lanes, 3);
+  t.eq(tl.lanes, 2);
+  t.eq(tl.cardW, QDF.GEOM.cardW[1], 'two lanes: the two-column card width');
 });
 
-t.check('lanes in and out follow the branches', () => {
+t.check('each card spans exactly the rows its stretch ran for', () => {
+  const { s, now } = morning();
+  const tl = TL.build(s, now);
+  t.eq(cards(tl), [
+    'Triage@0 start→start',
+    'Docker@0 start→tick',
+    'Plan@1 start→tick',
+    'Review@0 start→now'
+  ]);
+  const plan = tl.segs.find(sg => sg.item.title === 'Plan');
+  const review = tl.segs.find(sg => sg.item.title === 'Review');
+  t.ok(plan.startRow < review.startRow && review.startRow < plan.endRow, 'Plan and Review overlap, side by side');
+  t.eq(review.open, true);
+  t.eq(review.height, null, 'running cards size to their content');
+  t.ok(plan.height >= QDF.GEOM.rowMin, 'past cards carry a height hint');
+});
+
+t.check('lanes in, through and out follow the parallel work', () => {
   const { s, now } = morning();
   const rows = TL.build(s, now).rows.filter(r => r.type !== 'day');
-  const by = k => rows[k];
-  t.eq([by(2).lanesIn, by(2).lanesOut], [[], [1]], 'fork opens lane 1');
-  t.eq([by(4).lanesIn, by(4).lanesOut], [[1], [1, 2]], 'second fork takes lane 2');
-  t.eq([by(6).lanesIn, by(6).lanesOut], [[1, 2], [2]], 'Docker ends, lane 1 closes');
-  t.eq([by(7).lanesIn, by(7).lanesOut], [[2], []], 'Plan merges back into its focus');
-  t.eq(by(8).endLanes, [], 'nothing left running at now');
+  const lanes = r => [r.lanesIn, r.ending, r.lanesOut];
+  t.eq(lanes(rows[1]), [[0], [0], [0]], 'Triage hands lane 0 straight to Docker');
+  t.eq(lanes(rows[2]), [[0], [], [0, 1]], 'Plan branches into lane 1');
+  t.eq(lanes(rows[3]), [[0, 1], [0], [1]], 'Docker ends and joins Plan');
+  t.eq(lanes(rows[4]), [[1], [], [0, 1]], 'Review takes the free lane 0');
+  t.eq(lanes(rows[6]), [[0], [0], []], 'Review runs into now');
 });
 
-t.check('running background work carries its lane to now, and lanes are reused', () => {
-  let now = T0;
-  const s = M.newState(now);
-  ['a', 'b', 'c', 'd'].forEach(n => M.add(s, n, '', null, now));
-  M.start(s, s.queue[0].id, now); now += MIN;
-  M.toBackground(s, now); now += MIN;          /* a running */
-  M.toBackground(s, now); now += MIN;          /* b running */
-  M.finish(s, s.background[0].id, now); now += MIN;   /* a done: lane 1 free */
-  M.toBackground(s, now); now += MIN;          /* c running: reuses lane 1 */
-  const rows = TL.build(s, now).rows;
-  const bgs = rows.filter(r => r.type === 'bg').map(r => r.item.title + r.lane);
-  t.eq(bgs, ['a1', 'b2', 'c1']);
-  const nowRow = rows.find(r => r.type === 'now');
-  t.eq(nowRow.endLanes, [1, 2]);
-  t.eq(nowRow.lanesOut, []);
-  t.ok(rows.find(r => r.type === 'bg' && r.item.title === 'c').open);
-});
-
-t.check('a background task returned to the queue ends its branch', () => {
+t.check('the foreground is marked on its start row and nothing else changes', () => {
   let now = T0;
   const s = M.newState(now);
   ['a', 'b'].forEach(n => M.add(s, n, '', null, now));
-  M.start(s, s.queue[0].id, now); now += 5 * MIN;
-  M.toBackground(s, now); now += 5 * MIN;
-  M.backgroundToQueue(s, s.background[0].id, now); now += 5 * MIN;
+  M.start(s, byTitle(s, 'a').id, now); now += MIN;
+  M.start(s, byTitle(s, 'b').id, now); now += MIN;
+  const before = JSON.stringify(TL.build(s, now).segs.map(sg => [sg.lane, sg.startRow, sg.endRow]));
+  const fgRow = tl => tl.rows.find(r => r.foreground).seg.item.title;
+  t.eq(fgRow(TL.build(s, now)), 'b');
+  M.setForeground(s, byTitle(s, 'a').id);
   const tl = TL.build(s, now);
-  t.eq(sketch(tl), ['focus:a@0 background', 'bg:a@1', 'bgEnd:a@1 queued', 'present:b@0', 'now@0', 'future:a@0', 'add@0']);
-  t.eq(tl.rows.find(r => r.type === 'bgEnd').outcome, 'queued');
-  t.eq(tl.rows.find(r => r.type === 'future').item.title, 'a');
+  t.eq(fgRow(tl), 'a');
+  t.eq(JSON.stringify(tl.segs.map(sg => [sg.lane, sg.startRow, sg.endRow])), before, 'same layout either way');
+  t.eq(tl.rows.find(r => r.type === 'now').caps, [0, 1], 'both running lanes end at now');
 });
 
-t.check('gaps of a minute or more in focus are shown, shorter ones are not', () => {
+t.check('gaps of a minute or more with nothing running are shown, shorter ones are not', () => {
   let now = T0;
   const s = M.newState(now);
   ['a', 'b', 'c'].forEach(n => M.add(s, n, '', null, now));
   M.start(s, s.queue[0].id, now); now += 10 * MIN;
-  M.pause(s, now, 'end'); now += 25 * MIN;
+  M.pause(s, s.active[0].id, now, 'end'); now += 25 * MIN;
   M.start(s, s.queue[0].id, now); now += 10 * MIN;
-  M.pause(s, now, 'end'); now += 30 * 1000;
+  M.pause(s, s.active[0].id, now, 'end'); now += 30 * 1000;
   M.start(s, s.queue[0].id, now); now += 10 * MIN;
   const rows = TL.build(s, now).rows;
   const gaps = rows.filter(r => r.type === 'gap');
   t.eq(gaps.map(g => g.sec), [1500]);
-  const g = gaps[0];
-  t.eq(g.main, { in: 'idle', out: 'idle', through: true });
-  const after = rows[rows.indexOf(g) + 1];
-  t.eq(after.main.in, 'idle', 'the next focus row starts from the dashed line');
+  t.ok(gaps[0].idleOut, 'the dashed line runs on below a gap');
+  const next = rows[rows.indexOf(gaps[0]) + 1];
+  t.ok(next.idleIn, 'and into the next start');
+  t.eq(rows.filter(r => r.type === 'tick').length, 1, 'the short pause is a plain end');
 });
 
-t.check('lane 0 styles: none before history, solid when focused, idle otherwise, dotted in the future', () => {
+t.check('overlapping work never shows as a gap', () => {
   let now = T0;
   const s = M.newState(now);
-  M.add(s, 'a', '', null, now);
-  M.add(s, 'b', '', null, now);
-  let rows = TL.build(s, now).rows;
-  t.eq(rows.find(r => r.type === 'now').main, { in: null, out: 'future' }, 'fresh state: no line above now');
-  M.start(s, s.queue[0].id, now); now += 5 * MIN;
-  M.toBackground(s, now); now += 5 * MIN;     /* b in focus */
-  M.pause(s, now, 'end'); now += 5 * MIN;     /* nothing in focus */
-  rows = TL.build(s, now).rows;
-  t.eq(rows.find(r => r.type === 'bg').main.in, 'solid', 'fork while b is in focus');
-  t.eq(rows.find(r => r.type === 'now').main, { in: 'idle', out: 'future' });
-  rows.filter(r => r.type === 'future').forEach(r => t.eq(r.main, { in: 'future', out: 'future' }));
-  t.eq(rows[rows.length - 1].main, { in: 'future', out: null });
+  ['a', 'b'].forEach(n => M.add(s, n, '', null, now));
+  M.start(s, byTitle(s, 'a').id, now); now += 5 * MIN;
+  M.start(s, byTitle(s, 'b').id, now); now += 5 * MIN;
+  M.finish(s, byTitle(s, 'a').id, now); now += 30 * MIN;
+  M.finish(s, byTitle(s, 'b').id, now); now += 5 * MIN;
+  const rows = TL.build(s, now).rows;
+  t.eq(rows.filter(r => r.type === 'gap').length, 0);
+  t.eq(rows.find(r => r.type === 'now').idleSince, new Date(now - 5 * MIN).toISOString());
+});
+
+t.check('lanes are reused, lowest first', () => {
+  let now = T0;
+  const s = M.newState(now);
+  ['a', 'b', 'c', 'd'].forEach(n => M.add(s, n, '', null, now));
+  ['a', 'b', 'c'].forEach(n => { M.start(s, byTitle(s, n).id, now); now += MIN; });
+  M.finish(s, byTitle(s, 'b').id, now); now += MIN;
+  M.start(s, byTitle(s, 'd').id, now); now += MIN;
+  const tl = TL.build(s, now);
+  t.eq(tl.segs.map(sg => sg.item.title + sg.lane), ['a0', 'b1', 'c2', 'd1']);
+  t.eq(tl.lanes, 3);
+  t.eq(tl.cardW, QDF.GEOM.cardW[2]);
+});
+
+t.check('an empty state is just the now row', () => {
+  const s = M.newState(T0);
+  const tl = TL.build(s, T0);
+  t.eq(tl.rows.map(r => r.type), ['day', 'now']);
+  t.eq(tl.lanes, 1);
+  t.eq(tl.rows[1].idleIn, false, 'no line above now before any history');
 });
 
 t.check('day breaks come before the first row of each day, and before now', () => {
   let now = T0 - 2 * 86400000;
   const s = M.newState(now);
   ['a', 'b'].forEach(n => M.add(s, n, '', null, now));
-  M.start(s, s.queue[0].id, now); now += 20 * MIN;
-  M.finishAndNext(s, now); now += 10 * MIN;
-  M.pause(s, now, 'end');
+  M.start(s, byTitle(s, 'a').id, now); now += 20 * MIN;
+  M.finishAndNext(s, byTitle(s, 'a').id, now); now += 10 * MIN;
+  M.pause(s, byTitle(s, 'b').id, now, 'end');
   const rows = TL.build(s, T0).rows;
-  const days = rows.filter(r => r.type === 'day').map(r => r.day);
-  t.eq(days.length, 2);
+  t.eq(rows.filter(r => r.type === 'day').length, 2);
   t.eq(rows[0].type, 'day');
   t.eq(rows[rows.findIndex(r => r.type === 'now') - 1].type, 'day');
+});
+
+t.check('a stretch started and stopped at the same moment still gets its own row', () => {
+  const s = M.newState(T0);
+  ['a', 'b'].forEach(n => M.add(s, n, '', null, T0));
+  M.start(s, byTitle(s, 'a').id, T0);
+  M.finish(s, byTitle(s, 'a').id, T0);
+  M.start(s, byTitle(s, 'b').id, T0 + 60 * MIN);
+  const tl = TL.build(s, T0 + 70 * MIN);
+  const a = tl.segs.find(sg => sg.item.title === 'a');
+  t.eq(a.endRow, a.startRow + 1);
 });
 
 t.check('height hints duration, within limits', () => {
@@ -152,12 +186,12 @@ t.check('height hints duration, within limits', () => {
   t.ok(h(5 * 3600) - h(3600) < h(3600) - h(0), 'logarithmic, not linear');
 });
 
-t.check('every task appears in the timeline where it should', () => {
+t.check('every stretch of every task appears once', () => {
   const { s, now } = morning();
-  const rows = TL.build(s, now).rows;
-  const ids = new Set(rows.filter(r => r.item).map(r => r.item.id));
-  [s.current, ...s.queue, ...s.background, ...s.done].forEach(item => t.ok(ids.has(item.id), item.title + ' missing'));
-  t.eq(rows.filter(r => r.type === 'future').map(r => r.index), s.queue.map((x, k) => k));
+  const tl = TL.build(s, now);
+  const expected = [...s.active, ...s.queue, ...s.done].reduce((n, x) => n + x.stretches.length, 0);
+  t.eq(tl.segs.length, expected);
+  t.eq(tl.future.map(x => x.title), s.queue.map(x => x.title));
 });
 
 t.done();

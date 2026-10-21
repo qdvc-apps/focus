@@ -771,15 +771,18 @@ kbd {
 .timeline-scroll {
   position: absolute;
   inset: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
 }
 
+/* As wide as its columns, centred; scrolls sideways only if very many
+   tasks once ran at the same time. */
 .timeline {
   --node-y: 24px;
-  max-width: 880px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 520px;
   margin: 0 auto;
-  padding: 26px 48px 160px 40px;
+  padding: 26px 44px 160px 36px;
 }
 
 .tl-origin {
@@ -788,10 +791,10 @@ kbd {
   color: var(--ink-faint);
 }
 
-.tl-row {
+/* Past and present: one grid. Columns and rows are set inline by the view. */
+.tl-grid {
   position: relative;
   display: grid;
-  grid-template-columns: 58px var(--graph-w) minmax(0, 1fr);
 }
 
 .tl-time {
@@ -805,16 +808,40 @@ kbd {
   white-space: nowrap;
 }
 
+.tl-tick .tl-time { padding-top: 0; line-height: 10px; }
+.tl-tick-time { font-size: 10px; color: var(--ink-faint); }
+
 .tl-graph { position: relative; }
+
+/* Cards sit in their lane's column, spanning the rows they ran for. */
+.tl-grid > .tl-card,
+.tl-grid > .run-card {
+  position: relative;
+  z-index: 1;
+  margin: 6px 10px 6px 4px;
+}
+
+.lane-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 7px 1px 0;
+  border-radius: 50%;
+  background: var(--lc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
+}
+
+/* The queue: a plain list of rows, lining up with lane 0 above. */
+.tl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px var(--graph-w) var(--col-w);
+}
 
 .tl-body {
   min-width: 0;
-  padding: 6px 0 8px 4px;
+  padding: 6px 10px 8px 4px;
 }
-
-/* Rows whose card fills the row, so a longer stretch is a taller card. */
-.tl-fill .tl-body { display: flex; flex-direction: column; }
-.tl-fill .tl-card { flex: 1; }
 
 /* ---------------------------------------------------------------- lanes */
 
@@ -954,7 +981,6 @@ kbd {
 
 .tl-card {
   position: relative;
-  max-width: 600px;
   padding: 8px 12px 9px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
@@ -1045,53 +1071,6 @@ kbd {
 .tl-card:focus-within .tl-tools { opacity: 1; pointer-events: auto; }
 body.dragging-task .tl-tools { opacity: 0 !important; }
 
-/* ------------------------------------------------------ background rows */
-
-.tl-card-bg { max-width: 460px; }
-
-.tl-card-bg .tl-title::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin: 0 7px 1px 0;
-  border-radius: 50%;
-  background: var(--lc);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
-}
-
-.tl-bg-run {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-/* Indeterminate progress in the lane's colour: something is working, and
-   nobody knows how long it will take. */
-.pole-track {
-  flex: 1;
-  height: 9px;
-  overflow: hidden;
-  background: linear-gradient(var(--well-hi), var(--well-lo));
-  border-radius: 5px;
-  box-shadow: inset 0 1px 2px var(--shadow-deep), 0 1px 0 var(--sep-hi);
-}
-
-.pole {
-  height: 100%;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, .05) 55%, rgba(0, 0, 0, .1)),
-    repeating-linear-gradient(-45deg, var(--lc) 0 7px, color-mix(in srgb, var(--lc) 55%, #fff) 7px 14px);
-  background-size: 100% 100%, 19.8px 100%;
-  border-radius: 5px;
-  animation: pole 1.1s linear infinite;
-}
-
-@keyframes pole {
-  to { background-position: 0 0, 19.8px 0; }
-}
-
 /* ------------------------------------------------------- one-line rows */
 
 .tl-line {
@@ -1106,17 +1085,17 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
 
 .tl-line .icon { width: 13px; height: 13px; }
 .tl-line b { color: var(--ink-mid); }
-.tl-gap .tl-line { padding-top: 7px; font-style: italic; font-size: var(--fs-xs); }
+.tl-gap { padding-top: 7px; font-style: italic; font-size: var(--fs-xs); }
 
-.tl-day .tl-body {
+.tl-day {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 14px;
+  padding: 14px 10px 0 4px;
 }
 
-.tl-day-name { font-weight: 700; font-size: var(--fs-sm); color: var(--ink-mid); text-shadow: 0 1px 0 var(--emboss); }
-.tl-day-date { font-size: var(--fs-xs); color: var(--ink-dim); }
+.tl-day-name { font-weight: 700; font-size: var(--fs-sm); color: var(--ink-mid); text-shadow: 0 1px 0 var(--emboss); white-space: nowrap; }
+.tl-day-date { font-size: var(--fs-xs); color: var(--ink-dim); white-space: nowrap; }
 .tl-day .etched { flex: 1; }
 
 /* -------------------------------------------------------------- future */
@@ -1135,7 +1114,8 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
 .tl-future.drop-active::before {
   content: '';
   position: absolute;
-  inset: -4px -6px -4px calc(58px + var(--graph-w) - 2px);
+  inset: -4px auto -4px calc(58px + var(--graph-w) - 2px);
+  width: calc(var(--col-w) + 8px);
   border-radius: 10px;
   background: var(--accent-soft);
   pointer-events: none;
@@ -1149,8 +1129,7 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   content: '';
   position: absolute;
   left: calc(58px + var(--graph-w) + 4px);
-  right: 0;
-  max-width: 600px;
+  width: calc(var(--col-w) - 6px);
   top: -2px;
   height: 3px;
   border-radius: 2px;
@@ -1170,33 +1149,48 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   border: 2px solid #2f6fca;
 }
 
-.add-form { display: flex; gap: 6px; max-width: 600px; }
+.add-form { display: flex; gap: 6px; }
 .add-form .field { flex: 1; min-width: 0; }
 .add-hint { margin-top: 5px; font-size: var(--fs-xs); color: var(--ink-dim); }
 /* ---------- src/css/45-present.css ---------- */
 /* ==========================================================================
-   45-present.css — the present: the card for the task in focus, with its
-   glass-fronted clock, and the "now" line drawn across the timeline.
+   45-present.css — the present: running cards (with the glass-fronted clock
+   on the one in the foreground), the "now" line drawn across the timeline,
+   and hiding timers.
    ========================================================================== */
 
-.present-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 188px;
-  max-width: 640px;
+/* A running card reaches from when the task started down to the now line.
+   Its title sticks to the top of the view and its controls to the bottom,
+   so however long it has run, both stay in reach. */
+.run-card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  min-height: 132px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
-  border-radius: 12px;
-  box-shadow: inset 0 1px 0 var(--shine), 0 2px 3px var(--shadow), 0 10px 26px var(--shadow);
+  border-radius: 11px;
+  box-shadow: inset 0 1px 0 var(--shine), 0 2px 3px var(--shadow), 0 8px 20px var(--shadow);
   cursor: pointer;
 }
 
-.pc-main {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 9px 14px 14px 14px;
+.run-card.is-foreground {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--shine), 0 0 0 3px var(--accent-soft), 0 2px 3px var(--shadow), 0 12px 28px var(--shadow);
+}
+
+.run-card.is-selected:not(.is-foreground) {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--shine), 0 0 0 3px var(--accent-soft), 0 2px 3px var(--shadow);
+}
+
+.run-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 9px 12px 6px;
+  background: linear-gradient(var(--card-hi), color-mix(in srgb, var(--card-hi) 70%, var(--card-lo)));
+  border-radius: 10px 10px 0 0;
 }
 
 .eyebrow {
@@ -1206,47 +1200,67 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   height: 18px;
 }
 
-.pc-title {
-  font-size: 21px;
+.run-title {
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -.01em;
   overflow-wrap: anywhere;
 }
 
-.pc-notes {
+.is-foreground .run-title { font-size: 18px; }
+
+.run-notes {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 0 12px 6px;
   font-size: var(--fs-md);
   white-space: pre-wrap;
   color: var(--ink-mid);
 }
 
-.pc-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.pc-side {
+.run-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 8px;
-  padding: 12px;
-  background: linear-gradient(var(--well-lo), var(--well-hi));
-  border-left: 1px solid var(--sep);
-  border-radius: 0 11px 11px 0;
-  box-shadow: inset 1px 0 0 var(--sep-hi), inset 0 1px 3px var(--shadow);
+  margin-top: auto;
+  padding: 10px 12px 12px;
+  background: linear-gradient(color-mix(in srgb, var(--card-lo) 80%, var(--card-hi)), var(--card-lo));
+  border-top: 1px solid var(--sep);
+  border-radius: 0 0 10px 10px;
+  box-shadow: inset 0 1px 0 var(--sep-hi);
+}
+
+.run-time { font-size: var(--fs-sm); color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.run-actions .btn { height: 28px; padding: 0 10px; font-size: 12.5px; gap: 5px; }
+.run-actions .btn-icon { width: 30px; padding: 0; }
+/* The menu stays on the first row beside the main button; a second
+   button wraps below if the card is narrow. */
+.run-actions [data-act="task-menu"] { order: 1; }
+.run-actions [data-act="start-next"] { order: 2; }
+
+/* In a narrow card the secondary labels give way to their icons. */
+@container (max-width: 250px) {
+  .run-actions .narrow-hide { display: none; }
+  .run-actions [data-act="foreground"] { width: 30px; padding: 0; }
 }
 
 .clock-face {
   position: relative;
   overflow: hidden;
-  padding: 9px 10px 8px;
+  padding: 7px 10px 6px;
   text-align: center;
   color: var(--glass-ink);
   background: linear-gradient(var(--glass-hi), var(--glass-lo));
@@ -1277,7 +1291,7 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
 }
 
 .clock-digits {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 300;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -1289,6 +1303,7 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   display: grid;
   grid-template-columns: auto auto;
   gap: 2px 8px;
+  margin: 0;
   padding: 0 2px;
   font-size: 11.5px;
 }
@@ -1305,18 +1320,26 @@ body.dragging-task .tl-tools { opacity: 0 !important; }
   animation: breathe 2.4s ease-in-out infinite;
 }
 
-/* While a task is dragged, the present says it can take it. */
+.live-lamp.is-dim {
+  background: radial-gradient(circle at 35% 30%, #e3f1ff, #6aa0dc 55%, #3c6ea8);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .25);
+  animation: none;
+}
+
+/* While a task is dragged, anything that can start it says so. */
 .drop-hint { display: none; }
 
-body.dragging-task [data-drop="now"] .drop-hint {
+body.dragging-task [data-drop="now"] > .drop-hint,
+body.dragging-task .now-empty > .drop-hint {
   position: absolute;
   inset: 6px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  text-align: center;
   color: var(--accent-ink);
   background: color-mix(in srgb, var(--card-hi) 86%, transparent);
   border-radius: 9px;
@@ -1324,19 +1347,24 @@ body.dragging-task [data-drop="now"] .drop-hint {
   pointer-events: none;
 }
 
-[data-drop="now"].drop-active .drop-hint {
+[data-drop="now"].drop-active > .drop-hint,
+[data-drop="now"].drop-active .now-empty > .drop-hint {
   box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 4px var(--accent-soft) !important;
 }
 
 /* ------------------------------------------------------------ now line */
 
-.tl-now { min-height: 44px; }
-
 /* A calendar-style line across the whole timeline at the present moment. */
-.tl-now::before {
+.tl-nowline {
+  position: relative;
+  z-index: 1;
+  padding-left: calc(var(--graph-w) + 4px);
+}
+
+.tl-nowline::before {
   content: '';
   position: absolute;
-  left: 52px;
+  left: -6px;
   right: 0;
   top: calc(var(--node-y) - 1px);
   height: 2px;
@@ -1345,10 +1373,10 @@ body.dragging-task [data-drop="now"] .drop-hint {
   pointer-events: none;
 }
 
-.tl-now::after {
+.tl-nowline::after {
   content: '';
   position: absolute;
-  left: 48px;
+  left: -10px;
   top: calc(var(--node-y) - 5px);
   width: 10px;
   height: 10px;
@@ -1357,7 +1385,7 @@ body.dragging-task [data-drop="now"] .drop-hint {
   box-shadow: 0 0 0 2px var(--desk-top);
 }
 
-.tl-now .tl-time {
+.tl-now.tl-time {
   padding-right: 16px;
   font-weight: 700;
   color: var(--now-line);
@@ -1367,7 +1395,7 @@ body.dragging-task [data-drop="now"] .drop-hint {
   position: relative;
   z-index: 1;
   display: inline-block;
-  margin-top: 8px;
+  margin-top: 16px;
   padding: 1px 9px;
   font-size: 10.5px;
   font-weight: 700;
@@ -1391,11 +1419,11 @@ body.dragging-task [data-drop="now"] .drop-hint {
   animation: lane-ring 1.8s ease-out infinite;
 }
 
-/* Nothing in focus: the now row opens into a small panel. */
+/* Nothing running: the now line opens into a small panel. */
 .now-empty {
   position: relative;
-  max-width: 600px;
-  margin-top: 12px;
+  max-width: 520px;
+  margin: 12px 0 8px;
   padding: 14px 16px;
   background: linear-gradient(var(--card-hi), var(--card-lo));
   border: 1px solid var(--card-edge);
@@ -1406,6 +1434,42 @@ body.dragging-task [data-drop="now"] .drop-hint {
 .now-empty-title { font-size: 17px; font-weight: 300; color: var(--ink-mid); }
 .now-empty-text { margin: 4px 0 12px; color: var(--ink-dim); }
 .now-empty .btn-go { margin-bottom: 12px; }
+
+/* ------------------------------------------------------- hiding timers */
+
+/* Timers can be stressful. With them off, anything that counts is hidden,
+   and a calm stand-in shows where one is needed. Past durations stay: they
+   are history, not a clock running. */
+.timer-alt { display: none; }
+html[data-timers="off"] .timer { display: none !important; }
+html[data-timers="off"] .timer-alt { display: block; }
+html[data-timers="off"] .idle-calm.timer-alt { display: flex; }
+
+.toolbar-centre { display: flex; align-items: center; gap: 8px; }
+
+.idle-calm {
+  align-items: center;
+  justify-content: center;
+  width: 250px;
+  height: 34px;
+  font-size: var(--fs-sm);
+  font-style: italic;
+  color: var(--lcd-dim);
+  background: linear-gradient(var(--lcd-hi), var(--lcd-lo));
+  border: 1px solid var(--lcd-edge);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 4px var(--shadow), 0 1px 0 var(--sep-hi);
+}
+
+.tbtn-toggle .when-off { display: none; }
+.tbtn-toggle[aria-pressed="true"] .when-on { display: none; }
+.tbtn-toggle[aria-pressed="true"] .when-off { display: block; }
+
+/* Pressed in while timers are hidden. */
+.tbtn-toggle[aria-pressed="true"] {
+  background: linear-gradient(var(--btn-press-1), var(--btn-press-2));
+  box-shadow: inset 0 1px 3px var(--shadow-deep);
+}
 /* ---------- src/css/50-drawers.css ---------- */
 /* ==========================================================================
    50-drawers.css — what goes inside the drawers: the overview on the left
@@ -2048,7 +2112,10 @@ body.file-over .file-drop-veil { display: flex; }
       <span class="brand-name">QDVC Focus</span>
     </div>
     <div class="toolbar-spacer"></div>
-    <div class="idle-slot" id="idle-slot"></div>
+    <div class="toolbar-centre">
+      <div class="idle-slot" id="idle-slot"></div>
+      <button type="button" class="tbtn tbtn-toggle" id="btn-timers" data-act="toggle-timers" aria-pressed="false" title="Hide timers (T)" aria-label="Hide timers"><span class="when-on" data-icon="stopwatch"></span><span class="when-off" data-icon="stopwatchOff"></span></button>
+    </div>
     <div class="toolbar-spacer"></div>
     <div class="toolbar-tools">
       <button type="button" class="tbtn" id="btn-undo" data-act="undo" disabled title="Nothing to undo" aria-label="Nothing to undo"><span data-icon="undo"></span></button>
@@ -2098,11 +2165,12 @@ var QDF = (typeof QDF !== 'undefined') ? QDF : {};
 /* Change APP.name to re-brand the whole application. */
 QDF.APP = {
   name: 'QDVC Focus',
-  version: '2.0.0',
+  version: '3.0.0',
   /* Written as `format:` at the top of every export and of the saved state.
      Independent of the name, so a rename does not invalidate old exports.
-     Version 1 files (no stretch history) are still read. */
-  format: 'qdvc-focus/2',
+     Only this version is read: the app is pre-release, so earlier formats
+     are refused rather than migrated. */
+  format: 'qdvc-focus/3',
   /* Every localStorage key the app uses starts with this, which is how
      "Reset app" finds them all. */
   storagePrefix: 'qdvc-focus.',
@@ -2118,16 +2186,19 @@ QDF.IDLE = {
   alertAfter: 60
 };
 
-/* Timeline geometry, in pixels. Shared by the layout engine (row heights)
-   and the view (graph drawing); the CSS reads the same numbers from the
-   custom properties the view sets. */
+/* Timeline geometry, in pixels. Shared by the layout engine (row and card
+   heights) and the view (graph drawing and column widths); the CSS uses the
+   same node offset as --node-y. */
 QDF.GEOM = {
   nodeY: 24,          /* node centre, from the top of a row */
-  laneW: 22,          /* distance between lanes */
+  laneW: 22,          /* distance between lanes in the graph column */
   laneX0: 14,         /* centre of lane 0 inside the graph column */
-  rowMin: 50,         /* a past focus row of a few minutes */
-  rowMax: 168,        /* a past focus row of several hours */
-  gapMin: 60          /* seconds of nothing-in-focus worth showing */
+  rowMin: 50,         /* a card for a stretch of a few minutes */
+  rowMax: 168,        /* a card for a stretch of several hours */
+  gapMin: 60,         /* seconds with nothing running worth showing */
+  /* Card column width by the most tasks ever running at once: narrower as
+     more sit side by side. */
+  cardW: [440, 350, 290, 250, 220]
 };
 
 QDF.view = QDF.view || {};
@@ -2726,19 +2797,21 @@ QDF.yaml = (function () {
 
    State:
      created, lastInteraction   ISO times
-     current                    the task in focus, or null
+     active                     tasks running now, in the order they started;
+                                any number can run in parallel
+     foreground                 id of the active task you are attending to,
+                                or null. A pointer, not history: changing it
+                                leaves every stretch untouched.
      queue                      tasks waiting; queue[0] is "up next"
-     background                 tasks something else is working on (a build,
-                                a render, an upload) while you do another
      done                       finished tasks, newest first
 
    Task:
      id, title, notes, created
-     stretches   every period the task spent in focus or in the background,
-                 oldest first: { kind: 'focus' | 'background', from, to }.
-                 `to` is null for the one open stretch: the last stretch of
-                 the current task (focus) or of a background task
-                 (background). Queued and done tasks have no open stretch.
+     stretches   every period the task was running, oldest first:
+                 { from, to }, with `to` null for the one still running.
+                 An active task's last stretch is open; queued and done
+                 tasks have none open. Stretches of different tasks may
+                 overlap freely: that is what working in parallel means.
      finished    set only while the task is in `done`
 
    Everything else (when it started, totals, the live stretch) is derived
@@ -2756,9 +2829,9 @@ QDF.model = (function () {
     return {
       created: U.iso(now),
       lastInteraction: U.iso(now),
-      current: null,
+      active: [],
+      foreground: null,
       queue: [],
-      background: [],
       done: []
     };
   }
@@ -2781,10 +2854,9 @@ QDF.model = (function () {
     };
   }
 
-  var LISTS = ['queue', 'background', 'done'];
+  var LISTS = ['active', 'queue', 'done'];
 
   function find(s, id) {
-    if (s.current && s.current.id === id) return { list: 'current', index: 0, item: s.current };
     for (var n = 0; n < LISTS.length; n++) {
       var list = s[LISTS[n]];
       for (var k = 0; k < list.length; k++) {
@@ -2794,43 +2866,49 @@ QDF.model = (function () {
     return null;
   }
 
-  function detach(s, loc) {
-    if (loc.list === 'current') s.current = null;
-    else s[loc.list].splice(loc.index, 1);
+  /* -------------------------------------------------------- foreground */
+
+  function foreground(s) {
+    if (!s.active.length) return null;
+    for (var k = 0; k < s.active.length; k++) if (s.active[k].id === s.foreground) return s.active[k];
+    return s.active[s.active.length - 1];
+  }
+
+  /* When the foreground task leaves, attention passes to the task started
+     most recently among those still running. */
+  function settleForeground(s) {
+    var fg = foreground(s);
+    s.foreground = fg ? fg.id : null;
+  }
+
+  function setForeground(s, id) {
+    var loc = find(s, id);
+    if (!loc || loc.list !== 'active' || s.foreground === id) return null;
+    s.foreground = id;
+    return loc.item;
   }
 
   /* ---------------------------------------------------------- stretches */
 
   function openStretch(item) {
-    var st = item.stretches, last = st[st.length - 1];
+    var last = item.stretches[item.stretches.length - 1];
     return last && !last.to ? last : null;
   }
 
-  function begin(item, kind, now) {
-    item.stretches.push({ kind: kind, from: U.iso(now), to: null });
-  }
-
-  function end(item, now) {
-    var open = openStretch(item);
+  /* Take a task off whatever list it is on and close its running stretch. */
+  function detach(s, loc, now) {
+    s[loc.list].splice(loc.index, 1);
+    var open = openStretch(loc.item);
     if (open) open.to = U.iso(now);
-    return open;
+    if (loc.list === 'active') settleForeground(s);
+    return loc.item;
   }
 
-  function focus(s, item, now) {
-    begin(item, 'focus', now);
-    s.current = item;
-  }
-
-  /* Takes the current task out of focus and back into the queue, at the
-     front (as up next) or at the end. */
-  function suspend(s, now, where) {
-    var c = s.current;
-    if (!c) return null;
-    end(c, now);
-    s.current = null;
-    if (where === 'end') s.queue.push(c);
-    else s.queue.unshift(c);
-    return c;
+  function run(s, item, now) {
+    item.stretches.push({ from: U.iso(now), to: null });
+    s.active.push(item);
+    s.foreground = item.id;
+    return item;
   }
 
   /* ------------------------------------------------------------ creating */
@@ -2843,14 +2921,10 @@ QDF.model = (function () {
     return item;
   }
 
-  /* Creates a task and focuses it at once. Whatever was current becomes up
-     next, so nothing is lost. */
+  /* Creates a task and starts it at once, alongside anything running. */
   function addAndStart(s, title, notes, now) {
     if (!cleanTitle(title)) return null;
-    var item = newItem(title, notes, now);
-    var previous = suspend(s, now, 'front');
-    focus(s, item, now);
-    return { item: item, previous: previous };
+    return run(s, newItem(title, notes, now), now);
   }
 
   function edit(s, id, fields) {
@@ -2868,69 +2942,58 @@ QDF.model = (function () {
     return changed ? item : null;
   }
 
-  /* ----------------------------------------------------------- focusing */
+  /* ------------------------------------------------------------ running */
 
-  /* Brings a queued or background task into focus. The task that was in
-     focus goes back to the front of the queue. */
+  /* Starts a queued task alongside whatever is already running, and puts
+     it in the foreground. Nothing else stops. */
   function start(s, id, now) {
     var loc = find(s, id);
-    if (!loc || loc.list === 'current' || loc.list === 'done') return null;
-    detach(s, loc);
-    end(loc.item, now);
-    var previous = suspend(s, now, 'front');
-    focus(s, loc.item, now);
-    return { item: loc.item, from: loc.list, previous: previous };
+    if (!loc || loc.list !== 'queue') return null;
+    detach(s, loc, now);
+    return run(s, loc.item, now);
+  }
+
+  function startNext(s, now) {
+    return s.queue.length ? start(s, s.queue[0].id, now) : null;
   }
 
   function finish(s, id, now) {
     var loc = find(s, id);
-    if (!loc || (loc.list !== 'current' && loc.list !== 'background')) return null;
-    detach(s, loc);
-    end(loc.item, now);
-    loc.item.finished = U.iso(now);
-    s.done.unshift(loc.item);
-    return loc.item;
+    if (!loc || loc.list !== 'active') return null;
+    var item = detach(s, loc, now);
+    item.finished = U.iso(now);
+    s.done.unshift(item);
+    return item;
   }
 
-  /* "Move on": the current task is done and up next comes into focus. */
-  function finishAndNext(s, now) {
-    if (!s.current) return null;
-    var done = finish(s, s.current.id, now);
-    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
-    return { done: done, next: next };
+  /* "Move on": this task is done and up next starts in its place. */
+  function finishAndNext(s, id, now) {
+    var done = finish(s, id, now);
+    if (!done) return null;
+    return { done: done, next: startNext(s, now) };
   }
 
-  /* The current task carries on without you; up next comes into focus. */
-  function toBackground(s, now) {
-    var c = s.current;
-    if (!c) return null;
-    end(c, now);
-    begin(c, 'background', now);
-    s.background.push(c);
-    s.current = null;
-    var next = s.queue.length ? start(s, s.queue[0].id, now).item : null;
-    return { sent: c, next: next };
-  }
-
-  /* Out of focus, back to the queue; nothing else is started. */
-  function pause(s, now, where) {
-    return suspend(s, now, where === 'end' ? 'end' : 'front');
-  }
-
-  function swapWithNext(s, now) {
-    if (!s.current || !s.queue.length) return null;
-    return start(s, s.queue[0].id, now);
-  }
-
-  /* A background task whose machine has finished, but which you will deal
-     with later, goes back to the queue as up next. */
-  function backgroundToQueue(s, id, now) {
+  /* Stop running a task without finishing it: back to the queue, at the
+     front (as up next) or at the end. */
+  function pause(s, id, now, where) {
     var loc = find(s, id);
-    if (!loc || loc.list !== 'background') return null;
-    detach(s, loc);
-    end(loc.item, now);
-    s.queue.unshift(loc.item);
-    return loc.item;
+    if (!loc || loc.list !== 'active') return null;
+    var item = detach(s, loc, now);
+    if (where === 'end') s.queue.push(item);
+    else s.queue.unshift(item);
+    return item;
+  }
+
+  /* Pause this task and start up next instead. */
+  function swapWithNext(s, id, now) {
+    if (!s.queue.length) return null;
+    var next = s.queue[0];
+    var paused = pause(s, id, now, 'end');
+    if (!paused) return null;
+    s.queue.pop();
+    s.queue.splice(1, 0, paused);
+    var started = start(s, next.id, now);
+    return { paused: paused, started: started };
   }
 
   /* -------------------------------------------------------------- order */
@@ -2970,14 +3033,15 @@ QDF.model = (function () {
   function remove(s, id) {
     var loc = find(s, id);
     if (!loc) return null;
-    detach(s, loc);
+    s[loc.list].splice(loc.index, 1);
+    if (loc.list === 'active') settleForeground(s);
     return loc.item;
   }
 
   function restore(s, id) {
     var loc = find(s, id);
     if (!loc || loc.list !== 'done') return null;
-    detach(s, loc);
+    s.done.splice(loc.index, 1);
     delete loc.item.finished;
     s.queue.push(loc.item);
     return loc.item;
@@ -3006,17 +3070,14 @@ QDF.model = (function () {
     return first ? U.secondsSince(first, now) : 0;
   }
 
-  function total(item, kind, now) {
+  /* Total time the task has been running, across all its stretches. */
+  function total(item, now) {
     var sum = 0;
-    item.stretches.forEach(function (st) { if (st.kind === kind) sum += duration(st, now); });
+    item.stretches.forEach(function (st) { sum += duration(st, now); });
     return sum;
   }
 
-  function focusTotal(item, now) { return total(item, 'focus', now); }
-  function backgroundTotal(item, now) { return total(item, 'background', now); }
-
-  /* The live stretch: how long since it came into focus (or went into the
-     background) this time round. */
+  /* The live stretch: how long since it was last started. */
   function live(item, now) {
     var open = openStretch(item);
     return open ? duration(open, now) : 0;
@@ -3038,14 +3099,13 @@ QDF.model = (function () {
 
   return {
     newState: newState, newItem: newItem, find: find, openStretch: openStretch,
+    foreground: foreground, setForeground: setForeground,
     add: add, addAndStart: addAndStart, edit: edit,
-    start: start, finish: finish, finishAndNext: finishAndNext,
-    toBackground: toBackground, pause: pause, swapWithNext: swapWithNext,
-    backgroundToQueue: backgroundToQueue,
+    start: start, startNext: startNext, finish: finish, finishAndNext: finishAndNext,
+    pause: pause, swapWithNext: swapWithNext,
     move: move, makeNext: makeNext, moveBefore: moveBefore,
     remove: remove, restore: restore, clearDone: clearDone,
-    duration: duration, started: started, elapsed: elapsed,
-    focusTotal: focusTotal, backgroundTotal: backgroundTotal, live: live,
+    duration: duration, started: started, elapsed: elapsed, total: total, live: live,
     span: span, idle: idle, upNext: upNext
   };
 })();
@@ -3150,6 +3210,20 @@ QDF.store = (function () {
     return result;
   }
 
+  /* A change that is not worth an undo step — switching which running task
+     is in the foreground. It still counts as an interaction and is saved. */
+  function quiet(fn) {
+    var t = now();
+    var next = clone(state);
+    var result = fn(next, t);
+    if (result === null || result === undefined || result === false) return null;
+    next.lastInteraction = U.iso(t);
+    state = next;
+    save();
+    emit({ type: 'quiet', result: result });
+    return result;
+  }
+
   /* "I'm still on it": counts as an interaction without changing anything
      worth undoing. */
   function touch() {
@@ -3251,7 +3325,7 @@ QDF.store = (function () {
   }
 
   return {
-    load: load, get: get, commit: commit, touch: touch, undo: undo, replace: replace,
+    load: load, get: get, commit: commit, quiet: quiet, touch: touch, undo: undo, replace: replace,
     reloadFromStorage: reloadFromStorage, undoLabel: undoLabel, onChange: onChange,
     resetAll: resetAll, usage: usage, ownKeys: ownKeys,
     info: function () { return info; }, takeNotice: takeNotice,
@@ -3268,31 +3342,26 @@ QDF.store = (function () {
    The same document (as JSON) is what is kept in localStorage, so loading a
    saved session and importing a file go through one validation path.
 
-   A stretch is written as a one-key mapping holding an ISO 8601 interval:
-       - focus: 2026-10-21T09:00:00.000Z/2026-10-21T09:40:00.000Z
-       - background: 2026-10-21T09:40:00.000Z/..
+   A stretch is written as an ISO 8601 interval:
+       - 2026-10-21T09:00:00.000Z/2026-10-21T09:40:00.000Z
+       - 2026-10-21T09:40:00.000Z/..
    where `..` marks the open end of a stretch still running.
 
-   Import is forgiving about hand edits and about version 1 files, which had
-   totals instead of stretches; paperwork/STATE-FORMAT.md lists every repair.
+   Import is forgiving about hand edits; paperwork/STATE-FORMAT.md lists
+   every repair. Earlier formats are refused: the app is pre-release.
    ========================================================================== */
 
 QDF.serialize = (function () {
   var U = QDF.util;
-  var KINDS = { focus: true, background: true };
-
-  function stretchToDoc(st) {
-    var o = {};
-    o[st.kind] = st.from + '/' + (st.to || '..');
-    return o;
-  }
 
   function itemToDoc(item) {
     var o = { id: item.id, title: item.title };
     if (item.notes) o.notes = item.notes;
     o.created = item.created;
     if (item.finished) o.finished = item.finished;
-    if (item.stretches.length) o.stretches = item.stretches.map(stretchToDoc);
+    if (item.stretches.length) {
+      o.stretches = item.stretches.map(function (st) { return st.from + '/' + (st.to || '..'); });
+    }
     return o;
   }
 
@@ -3302,18 +3371,19 @@ QDF.serialize = (function () {
       saved: U.iso(now),
       created: s.created,
       last_interaction: s.lastInteraction,
-      current: s.current ? itemToDoc(s.current) : null,
+      foreground: s.foreground,
+      active: s.active.map(itemToDoc),
       queue: s.queue.map(itemToDoc),
-      background: s.background.map(itemToDoc),
       done: s.done.map(itemToDoc)
     };
   }
 
   var HEADER =
     '# ' + QDF.APP.name + ' state\n' +
+    '# active: running now, in parallel; foreground is the one you are attending to.\n' +
     '# queue: the first entry is up next. done: newest first.\n' +
-    '# stretches: when each task was in focus or in the background, as\n' +
-    '# ISO 8601 intervals in UTC; ".." marks one still running.\n';
+    '# stretches: when each task was running, as ISO 8601 intervals in UTC;\n' +
+    '# ".." marks one still running.\n';
 
   function toYaml(s, now) {
     return HEADER + QDF.yaml.emit(toDoc(s, now), true);
@@ -3332,48 +3402,28 @@ QDF.serialize = (function () {
     return t === null ? null : new Date(t).toISOString();
   }
 
-  function parseStretch(raw, warn, where) {
-    var kind, value;
-    if (isMap(raw) && Object.keys(raw).length === 1 && KINDS[Object.keys(raw)[0]]) {
-      kind = Object.keys(raw)[0];
-      value = String(raw[kind] == null ? '' : raw[kind]);
-      var parts = value.split('/');
-      if (parts.length !== 2) { warn('Ignored a stretch in ' + where + ' that is not "start/end".'); return null; }
-      var from = time(parts[0]);
-      var openEnd = /^\s*(\.\.)?\s*$/.test(parts[1]);
-      var to = openEnd ? null : time(parts[1]);
-      if (!from || (!openEnd && !to)) { warn('Ignored a stretch in ' + where + ' with an unreadable time.'); return null; }
-      return { kind: kind, from: from, to: to };
+  function parseStretch(raw, warn, label) {
+    if (isMap(raw) && time(raw.from)) {   /* the long-hand form, { from, to } */
+      return { from: time(raw.from), to: raw.to ? time(raw.to) : null };
     }
-    /* The long-hand form someone might type: { kind, from, to } */
-    if (isMap(raw) && KINDS[raw.kind] && time(raw.from)) {
-      return { kind: raw.kind, from: time(raw.from), to: raw.to ? time(raw.to) : null };
+    var parts = String(raw == null ? '' : raw).split('/');
+    if (typeof raw !== 'string' || parts.length !== 2) {
+      warn('Ignored a stretch in ' + label + ' that is not "start/end".');
+      return null;
     }
-    warn('Ignored an entry in ' + where + ' stretches that is not a focus or background stretch.');
-    return null;
+    var from = time(parts[0]);
+    var openEnd = /^\s*(\.\.)?\s*$/.test(parts[1]);
+    var to = openEnd ? null : time(parts[1]);
+    if (!from || (!openEnd && !to)) {
+      warn('Ignored a stretch in ' + label + ' with an unreadable time.');
+      return null;
+    }
+    return { from: from, to: to };
   }
 
-  /* Version 1 kept totals, not stretches. Rebuild plausible stretches from
-     them: banked time laid end to end from `started`, then the live stretch
-     where it really began. */
-  function fromVersion1(raw) {
-    var out = [];
-    var t = U.ms(time(raw.started)) || U.ms(time(raw.created));
-    var fs = Math.max(0, Number(raw.focus_seconds) || 0);
-    var bs = Math.max(0, Number(raw.background_seconds) || 0);
-    if (t !== null && fs) { out.push({ kind: 'focus', from: U.iso(t), to: U.iso(t + fs * 1000) }); t += fs * 1000; }
-    if (t !== null && bs) { out.push({ kind: 'background', from: U.iso(t), to: U.iso(t + bs * 1000) }); t += bs * 1000; }
-    if (time(raw.focused_since)) out.push({ kind: 'focus', from: time(raw.focused_since), to: null });
-    if (time(raw.background_since)) out.push({ kind: 'background', from: time(raw.background_since), to: null });
-    if (!out.length && time(raw.started)) {
-      out.push({ kind: 'focus', from: time(raw.started), to: time(raw.finished) || time(raw.started) });
-    }
-    return out;
-  }
-
-  /* Sorted, no overlaps, no stretch ending before it starts, and at most
-     one open stretch, which must be the last. */
-  function tidy(list, now) {
+  /* Sorted, no overlaps within one task, no stretch ending before it
+     starts, and at most one open stretch, which must be the last. */
+  function tidy(list) {
     list.sort(function (a, b) { return U.ms(a.from) - U.ms(b.from); });
     for (var k = 0; k < list.length; k++) {
       var st = list[k], next = list[k + 1];
@@ -3407,19 +3457,14 @@ QDF.serialize = (function () {
       });
     } else if (raw.stretches != null) {
       warn('Ignored "stretches" in ' + label + ' because it is not a list.');
-    } else if ('started' in raw || 'focus_seconds' in raw || 'focused_since' in raw || 'background_since' in raw) {
-      item.stretches = fromVersion1(raw);
-      ctx.converted = true;
     }
-    tidy(item.stretches, now);
+    tidy(item.stretches);
 
     var last = item.stretches[item.stretches.length - 1];
-    var openKind = { current: 'focus', background: 'background' }[where];
-    if (openKind) {
-      if (!last || last.to || last.kind !== openKind) {
-        if (last && !last.to) last.to = U.iso(Math.max(now, U.ms(last.from)));
-        var from = last && last.to && U.ms(last.to) > now ? last.to : U.iso(now);
-        item.stretches.push({ kind: openKind, from: from, to: null });
+    if (where === 'active') {
+      if (!last || last.to) {
+        var from = last && U.ms(last.to) > now ? last.to : U.iso(now);
+        item.stretches.push({ from: from, to: null });
       }
     } else if (last && !last.to) {
       var close = where === 'done' && time(raw.finished) ? time(raw.finished) : U.iso(now);
@@ -3427,9 +3472,7 @@ QDF.serialize = (function () {
       warn('Closed a stretch that was still running on "' + item.title + '" in ' + label + '.');
     }
 
-    if (where === 'done') {
-      item.finished = time(raw.finished) || (last && last.to) || U.iso(now);
-    }
+    if (where === 'done') item.finished = time(raw.finished) || (last && last.to) || U.iso(now);
     if (!item.created) item.created = item.stretches.length ? item.stretches[0].from : U.iso(now);
     return item;
   }
@@ -3443,48 +3486,37 @@ QDF.serialize = (function () {
     }).filter(Boolean);
   }
 
-  /* Returns { state, warnings, version }. Throws when the document cannot
-     be a state at all, with a message meant for the person importing it. */
+  /* Returns { state, warnings }. Throws when the document cannot be a state
+     at all, with a message meant for the person importing it. */
   function fromDocDetailed(doc, now) {
     if (!isMap(doc)) {
-      throw new Error('This does not look like a ' + QDF.APP.name + ' state: expected keys such as "current" and "queue" at the top level.');
+      throw new Error('This does not look like a ' + QDF.APP.name + ' state: expected keys such as "active" and "queue" at the top level.');
     }
-    var version = 2;
     if (doc.format !== undefined && doc.format !== null) {
       var m = /^qdvc-focus\/(\d+)$/.exec(String(doc.format));
       if (!m) throw new Error('Unrecognised format "' + doc.format + '"; expected ' + QDF.APP.format + '.');
-      version = Number(m[1]);
-      if (version > 2) throw new Error('This file was written by a newer version (' + doc.format + ').');
-    } else if (!('current' in doc) && !('queue' in doc) && !('background' in doc) && !('done' in doc)) {
-      throw new Error('This does not look like a ' + QDF.APP.name + ' state: none of "current", "queue", "background" or "done" are present.');
+      var v = Number(m[1]);
+      if (v > 3) throw new Error('This file was written by a newer version (' + doc.format + ').');
+      if (v < 3) throw new Error('This file is in an earlier format (' + doc.format + ') that this version no longer reads.');
+    } else if (!('active' in doc) && !('queue' in doc) && !('done' in doc)) {
+      throw new Error('This does not look like a ' + QDF.APP.name + ' state: none of "active", "queue" or "done" are present.');
     }
 
     var warnings = [];
-    var ctx = { now: now, seen: {}, converted: false, warn: function (w) { warnings.push(w); } };
+    var ctx = { now: now, seen: {}, warn: function (w) { warnings.push(w); } };
     var s = QDF.model.newState(now);
     s.created = time(doc.created) || s.created;
     s.lastInteraction = time(doc.last_interaction) || s.lastInteraction;
-
-    var cur = doc.current;
-    if (Array.isArray(cur)) {
-      ctx.warn('"current" holds a list; the first entry is in focus and the rest were queued.');
-      s.current = cur.length ? itemFromDoc(cur[0], 'current', ctx, 'current') : null;
-      s.queue = cur.slice(1).map(function (raw, n) {
-        return itemFromDoc(raw, 'queue', ctx, 'current #' + (n + 2));
-      }).filter(Boolean);
-    } else if (cur !== undefined && cur !== null && cur !== '') {
-      s.current = itemFromDoc(cur, 'current', ctx, 'current');
-    }
-    s.queue = s.queue.concat(list(doc, 'queue', ctx));
-    s.background = list(doc, 'background', ctx);
+    s.active = list(doc, 'active', ctx);
+    s.queue = list(doc, 'queue', ctx);
     s.done = list(doc, 'done', ctx);
     s.done.sort(function (a, b) { return U.ms(b.finished) - U.ms(a.finished); });
 
-    if (ctx.converted) {
-      warnings.unshift('Converted from format qdvc-focus/1, which kept totals rather than a history: ' +
-        'earlier stretches are reconstructed, so their exact times are approximate.');
-    }
-    return { state: s, warnings: warnings, version: version };
+    var fg = doc.foreground == null ? null : String(doc.foreground);
+    var known = s.active.some(function (x) { return x.id === fg; });
+    if (fg && !known) ctx.warn('"foreground" names a task that is not running; the most recently started one is in the foreground instead.');
+    s.foreground = known ? fg : (s.active.length ? s.active[s.active.length - 1].id : null);
+    return { state: s, warnings: warnings };
   }
 
   function fromDoc(doc, now) {
@@ -3504,49 +3536,46 @@ QDF.serialize = (function () {
 /* ---------- src/js/35-timeline.js ---------- */
 /* ==========================================================================
    35-timeline.js — lays the state out as a timeline, past at the top and
-   future at the bottom, the way a Git graph lays out commits.
+   the present at the bottom, the way a Git graph lays out branches.
 
-   Lane 0 is the main line: whatever was in focus. A background stretch
-   forks off into its own lane (1, 2, …) at the moment it starts and merges
-   back when it ends — into the task's next focus stretch if it was brought
-   forward, or through an end marker if it finished or went back to the
-   queue. Background work still running carries its lane down to the "now"
-   row, where it ends.
+   Every stretch of every task becomes a card. Cards sit in lanes (columns):
+   a stretch takes the lowest lane free when it starts and keeps it until it
+   ends. A card spans every row from its start to its end, so tasks that ran
+   at the same time sit side by side. With one task at a time, everything
+   stays in lane 0 and reads as a single line.
 
-   build(state, now) → { rows, lanes, now }. Each row has a `type`:
+   Rows are the moments something changed:
+     day     a date heading
+     start   a stretch began (the card starts here)
+     tick    a stretch ended and nothing else happened at that moment
+     gap     a minute or more with nothing running began here
+     now     the present: running stretches end here
 
-     day        a date heading
-     focus      a past focus stretch (lane 0); `outcome` is how it ended:
-                'done', 'background' or 'paused'
-     gap        a stretch of nothing in focus (lane 0, dashed)
-     bg         a background stretch starting (its own lane, forks from 0)
-     bgEnd      a background stretch ending other than by being brought
-                forward; `outcome` is 'done', 'queued' or 'ended'
-     present    the task in focus now
-     now        the present moment
-     future     a queued task; index 0 is up next
-     add        the "add a task" row at the very end
+   build(state, now) → { rows, segs, lanes, nowRow, cardW }
 
-   and the graph information the view needs:
+   Each seg (stretch) has: item, where, stretch, from, to, open, sec,
+   outcome ('done' | 'paused' | 'running'), lane, startRow, endRow (the row
+   whose top it ends at, exclusive), height (card min-height, or null).
 
-     lane       which lane the row's node sits on
-     lanesIn    background lanes arriving from above
-     lanesOut   background lanes continuing below
-     mergeLane  a background lane that ends in this row's node (focus/present)
-     endLanes   background lanes that end at this row (now)
-     main       { in, out, through } styles of lane 0: 'solid' (focused),
-                'idle' (nothing in focus), 'future', or null (no line)
-     height     the row's minimum height in pixels, or null for "fit"
+   Each row has: type, t, and for the graph column
+     lanesIn   lanes running into the row from above
+     ending    lanes that end at the top of this row
+     through   lanes that run straight through
+     lane      the lane of this row's node (start rows)
+     merges    [{ from, to }] lanes that end here and join another lane
+     caps      lanes that end at this row's node (running work, at now)
+     fork      the lane a new branch leaves from, or null
+     idleIn, idleOut   whether lane 0 shows the dashed "nothing running"
+                       line above / below the node line
+     height    the row's minimum height
 
    Pure: no DOM, no clock of its own. tools/test-timeline.mjs covers it.
    ========================================================================== */
 
 QDF.timeline = (function () {
   var U = QDF.util, M = QDF.model, G = QDF.GEOM;
-
-  /* At the same instant, endings come before starts, and a background
-     stretch starting (the fork) before the next focus stretch. */
-  var ORDER = { bgEnd: 0, bg: 1, gap: 2, focus: 3 };
+  var ORDER = { tick: 0, gap: 1, start: 2 };
+  var ROW_MIN = { day: 42, start: 36, tick: 10, gap: 30, now: 48 };
 
   /* Height hints duration: logarithmic, so five minutes and five hours both
      fit on screen, but a long stretch visibly takes more room. */
@@ -3556,196 +3585,169 @@ QDF.timeline = (function () {
   }
 
   function collect(s, now) {
-    var events = [], segs = [];
-    var groups = [
-      ['done', s.done],
-      ['current', s.current ? [s.current] : []],
-      ['background', s.background],
-      ['queue', s.queue]
-    ];
-    groups.forEach(function (g) {
-      var where = g[0];
+    var segs = [];
+    [['done', s.done], ['active', s.active], ['queue', s.queue]].forEach(function (g) {
       g[1].forEach(function (item) {
-        var st = item.stretches, lastIndex = st.length - 1;
-        st.forEach(function (x, k) {
-          var from = U.ms(x.from), to = x.to ? U.ms(x.to) : null;
-          var key = item.id + '#' + k;
-          var prev = st[k - 1], next = st[k + 1];
-          if (x.kind === 'focus') {
-            segs.push({ from: from, to: to === null ? now : to });
-            if (!x.to) return;  /* the open focus stretch is the present row */
-            events.push({
-              type: 'focus', t: from, key: key, item: item, where: where, stretch: x, index: k,
-              sec: M.duration(x, now),
-              outcome: item.finished && k === lastIndex ? 'done'
-                : next && next.kind === 'background' && next.from === x.to ? 'background' : 'paused',
-              mergeKey: prev && prev.kind === 'background' && prev.to === x.from ? item.id + '#' + (k - 1) : null
-            });
-          } else {
-            events.push({
-              type: 'bg', t: from, key: key, item: item, where: where, stretch: x, index: k,
-              open: !x.to, sec: M.duration(x, now)
-            });
-            if (x.to && !(next && next.kind === 'focus' && next.from === x.to)) {
-              events.push({
-                type: 'bgEnd', t: to, key: key, item: item, where: where, stretch: x, index: k,
-                outcome: next ? 'queued'
-                  : item.finished ? 'done'
-                  : where === 'queue' ? 'queued' : 'ended'
-              });
-            }
-          }
+        var last = item.stretches.length - 1;
+        item.stretches.forEach(function (st, k) {
+          var to = st.to ? U.ms(st.to) : null;
+          segs.push({
+            key: item.id + '#' + k, item: item, where: g[0], stretch: st, index: k,
+            from: U.ms(st.from), to: to, open: to === null, sec: M.duration(st, now),
+            outcome: to === null ? 'running' : item.finished && k === last ? 'done' : 'paused'
+          });
         });
       });
     });
-
-    segs.sort(function (a, b) { return a.from - b.from; });
-    for (var n = 0; n + 1 < segs.length; n++) {
-      var gap = (segs[n + 1].from - segs[n].to) / 1000;
-      if (gap >= G.gapMin) events.push({ type: 'gap', t: segs[n].to, sec: Math.floor(gap), key: 'gap#' + n });
-    }
-
-    events.sort(function (a, b) {
-      if (a.t !== b.t) return a.t - b.t;
-      if (a.key === b.key) return a.type === 'bg' ? -1 : 1;
-      return ORDER[a.type] - ORDER[b.type];
-    });
-    return { events: events, segs: segs };
+    segs.sort(function (a, b) { return a.from - b.from || (a.key < b.key ? -1 : 1); });
+    return segs;
   }
 
   function build(s, now) {
-    var c = collect(s, now);
-    var segs = c.segs;
+    var segs = collect(s, now);
 
-    function activeAt(t) {
-      for (var k = 0; k < segs.length; k++) {
-        if (segs[k].from <= t && t < segs[k].to) return true;
-      }
-      return false;
-    }
+    /* ------------------------------------------------ the moments */
+    var points = [], starts = {}, ends = {};
+    segs.forEach(function (sg) {
+      points.push({ type: 'start', t: sg.from, seg: sg });
+      starts[sg.from] = true;
+      if (!sg.open) ends[sg.to] = true;
+    });
 
-    /* ---------------------------------------------------- row sequence */
+    /* Holes in the union of all stretches: nothing was running. */
+    var cover = segs.map(function (sg) { return [sg.from, sg.open ? now : sg.to]; });
+    var gaps = {}, reach = null;
+    cover.forEach(function (c) {
+      if (reach !== null && c[0] - reach >= G.gapMin * 1000) gaps[reach] = Math.floor((c[0] - reach) / 1000);
+      reach = reach === null ? c[1] : Math.max(reach, c[1]);
+    });
+
+    Object.keys(ends).forEach(function (k) {
+      var t = Number(k);
+      if (gaps[t] !== undefined) points.push({ type: 'gap', t: t, sec: gaps[t] });
+      else if (!starts[t]) points.push({ type: 'tick', t: t });
+    });
+    points.sort(function (a, b) { return a.t - b.t || ORDER[a.type] - ORDER[b.type]; });
+
+    /* ------------------------------------------------------- rows */
     var rows = [], lastDay = null;
     function dayBreak(t) {
       var d = U.dayKey(U.iso(t));
-      if (d !== lastDay) { rows.push({ type: 'day', t: t, day: d, key: 'day#' + d }); lastDay = d; }
+      if (d !== lastDay) { rows.push({ type: 'day', t: t, day: d }); lastDay = d; }
     }
-    c.events.forEach(function (e) { dayBreak(e.t); rows.push(e); });
-
+    points.forEach(function (p) {
+      dayBreak(p.t);
+      if (p.type === 'start') p.seg.startRow = rows.length;
+      rows.push(p);
+    });
     dayBreak(now);
-    var lastFocusEnd = null;
-    segs.forEach(function (sg) { if (lastFocusEnd === null || sg.to > lastFocusEnd) lastFocusEnd = sg.to; });
+    var nowRow = rows.length;
+    var lastEnd = null;
+    cover.forEach(function (c) { lastEnd = lastEnd === null ? c[1] : Math.max(lastEnd, c[1]); });
+    rows.push({ type: 'now', t: now, idleSince: !s.active.length && lastEnd !== null ? U.iso(lastEnd) : null });
 
-    if (s.current) {
-      var cur = s.current, k = cur.stretches.length - 1, open = cur.stretches[k], prev = cur.stretches[k - 1];
-      rows.push({
-        type: 'present', t: U.ms(open.from), key: 'present', item: cur, stretch: open, index: k,
-        mergeKey: prev && prev.kind === 'background' && prev.to === open.from ? cur.id + '#' + (k - 1) : null
-      });
-    }
-    rows.push({
-      type: 'now', t: now, key: 'now',
-      idleSince: !s.current && lastFocusEnd !== null ? U.iso(lastFocusEnd) : null
-    });
-    s.queue.forEach(function (item, i) {
-      rows.push({ type: 'future', key: 'future#' + item.id, item: item, index: i });
-    });
-    rows.push({ type: 'add', key: 'add' });
-
-    /* ----------------------------------------------------------- lanes */
-    var lanes = [], laneOf = {}, maxLane = 0, began = false, prevOut = null;
-
-    function active() {
-      var out = [];
-      for (var L = 1; L < lanes.length; L++) if (lanes[L]) out.push(L);
-      return out;
-    }
-
-    rows.forEach(function (r) {
-      r.lanesIn = active();
-      r.lane = 0;
-
-      if (r.type === 'bg') {
-        var L = 1;
-        while (lanes[L]) L++;
-        lanes[L] = r.key;
-        laneOf[r.key] = L;
-        r.lane = L;
-        if (L > maxLane) maxLane = L;
-      } else if (r.type === 'bgEnd') {
-        r.lane = laneOf[r.key] || 0;
-        if (r.lane) lanes[r.lane] = null;
-      } else if ((r.type === 'focus' || r.type === 'present') && r.mergeKey && laneOf[r.mergeKey] &&
-                 lanes[laneOf[r.mergeKey]] === r.mergeKey) {
-        r.mergeLane = laneOf[r.mergeKey];
-        lanes[r.mergeLane] = null;
-      } else if (r.type === 'now') {
-        r.endLanes = r.lanesIn;
-        lanes = [];
+    /* Where each stretch ends: the first row after its start at or after
+       its end time; running stretches end at now. */
+    segs.forEach(function (sg) {
+      if (sg.open) { sg.endRow = nowRow; return; }
+      for (var r = sg.startRow + 1; r <= nowRow; r++) {
+        if (rows[r].type !== 'day' && rows[r].t >= sg.to) { sg.endRow = r; return; }
       }
-      r.lanesOut = active();
-
-      /* lane 0 */
-      switch (r.type) {
-        case 'focus':
-        case 'present':
-          r.main = { in: began ? prevOut : null, out: 'solid' };
-          began = true;
-          break;
-        case 'gap':
-          r.main = { in: 'idle', out: 'idle', through: true };
-          break;
-        case 'now':
-          r.main = { in: began ? (s.current ? 'solid' : 'idle') : null, out: 'future' };
-          began = true;
-          break;
-        case 'future':
-          r.main = { in: 'future', out: 'future' };
-          break;
-        case 'add':
-          r.main = { in: 'future', out: null };
-          break;
-        default:
-          if (!began) { r.main = null; break; }
-          var style = activeAt(r.t) ? 'solid' : 'idle';
-          r.main = { in: style, out: style, through: true };
-      }
-      if (r.main) prevOut = r.main.out;
-
-      r.height =
-        r.type === 'focus' ? heightFor(r.sec) :
-        r.type === 'bg' ? (r.open ? 70 : 48) :
-        r.type === 'bgEnd' ? 44 :
-        r.type === 'gap' ? 32 :
-        r.type === 'day' ? 44 :
-        r.type === 'future' ? (r.index === 0 ? 58 : 48) :
-        null;
+      sg.endRow = nowRow;
     });
 
-    return { rows: rows, lanes: maxLane + 1, now: now };
+    /* ------------------------------------------------------ lanes */
+    var laneSeg = [], maxLane = 0, began = false;
+    var fg = M.foreground(s);
+
+    rows.forEach(function (r, i) {
+      var inLanes = [], ending = [], through = [];
+      for (var L = 0; L < laneSeg.length; L++) {
+        var sg = laneSeg[L];
+        if (!sg) continue;
+        inLanes.push(L);
+        if (sg.endRow === i) ending.push(L); else through.push(L);
+      }
+      ending.forEach(function (L) { r.endingSegs = (r.endingSegs || []).concat([laneSeg[L]]); laneSeg[L] = null; });
+
+      r.lanesIn = inLanes;
+      r.ending = ending;
+      r.through = through;
+      r.merges = [];
+      r.caps = [];
+      r.fork = null;
+      r.idleIn = began && !inLanes.length;
+
+      if (r.type === 'start') {
+        var lane = 0;
+        while (laneSeg[lane]) lane++;
+        laneSeg[lane] = r.seg;
+        r.seg.lane = lane;
+        r.lane = lane;
+        if (lane > maxLane) maxLane = lane;
+        if (ending.indexOf(lane) === -1 && through.length) r.fork = through[0];
+        r.foreground = r.seg.open && fg && r.seg.item.id === fg.id;
+        began = true;
+      }
+
+      if (r.type === 'now') {
+        r.endingSegs = r.endingSegs || [];
+        var running = r.endingSegs.filter(function (x) { return x.open; }).map(function (x) { return x.lane; });
+        r.caps = running;
+        ending.forEach(function (L) {
+          if (running.indexOf(L) === -1) r.merges.push({ from: L, to: running.length ? running[0] : 0 });
+        });
+      } else {
+        ending.forEach(function (L) {
+          if (r.type === 'start' && L === r.lane) return;   /* the same lane carries straight on */
+          var to = through.length ? through[0] : r.type === 'start' ? r.lane : 0;
+          if (to !== L || r.type !== 'start') r.merges.push({ from: L, to: to });
+        });
+      }
+
+      var out = through.slice();
+      if (r.type === 'start') out.push(r.lane);
+      r.lanesOut = r.type === 'now' ? [] : out.sort(function (a, b) { return a - b; });
+      r.idleOut = began && !r.lanesOut.length && r.type !== 'now';
+      r.height = ROW_MIN[r.type];
+    });
+
+    /* ------------------------------------------------ card sizes */
+    segs.forEach(function (sg) { sg.height = sg.open ? null : heightFor(sg.sec); });
+    var lanes = maxLane + 1;
+
+    return {
+      rows: rows,
+      segs: segs,
+      lanes: lanes,
+      nowRow: nowRow,
+      cardW: G.cardW[Math.min(lanes, G.cardW.length) - 1],
+      future: s.queue
+    };
   }
 
   return { build: build, heightFor: heightFor };
 })();
 /* ---------- src/js/40-prefs.js ---------- */
 /* ==========================================================================
-   40-prefs.js — interface preferences: colour theme and which drawers are
-   open. Kept apart from the task state (and out of the YAML), in their own
-   localStorage key.
+   40-prefs.js — interface preferences: colour theme, whether timers are
+   shown, and which drawers are open. Kept apart from the task state (and
+   out of the YAML), in their own localStorage key.
 
-   The theme is applied as soon as this file runs, before the page is first
-   painted, so a dark-mode user never sees a flash of the light theme.
+   The theme and the timers setting are applied as soon as this file runs,
+   before the page is first painted, so a dark-mode user never sees a flash
+   of the light theme and hidden timers never flash up.
    ========================================================================== */
 
 QDF.prefs = (function () {
   var THEMES = ['auto', 'light', 'dark'];
-  var DEFAULTS = { theme: 'auto', overview: false, inspector: false };
+  var DEFAULTS = { theme: 'auto', timers: true, overview: false, inspector: false };
   var p = copy(DEFAULTS);
   var mq = null;
   var listeners = [];
 
   function copy(o) {
-    return { theme: o.theme, overview: o.overview, inspector: o.inspector };
+    return { theme: o.theme, timers: o.timers, overview: o.overview, inspector: o.inspector };
   }
 
   function storage() {
@@ -3759,6 +3761,7 @@ QDF.prefs = (function () {
       if (raw) {
         var o = JSON.parse(raw);
         if (THEMES.indexOf(o.theme) !== -1) p.theme = o.theme;
+        p.timers = o.timers !== false;
         p.overview = !!o.overview;
         p.inspector = !!o.inspector;
       }
@@ -3781,6 +3784,7 @@ QDF.prefs = (function () {
   function apply() {
     if (typeof document === 'undefined' || !document.documentElement || !document.documentElement.setAttribute) return;
     document.documentElement.setAttribute('data-theme', effectiveTheme());
+    document.documentElement.setAttribute('data-timers', p.timers ? 'on' : 'off');
   }
 
   function get(key) { return p[key]; }
@@ -3789,7 +3793,7 @@ QDF.prefs = (function () {
     if (p[key] === value) return;
     p[key] = value;
     save();
-    if (key === 'theme') apply();
+    if (key === 'theme' || key === 'timers') apply();
     listeners.forEach(function (fn) { fn(key, value); });
   }
 
@@ -3850,6 +3854,10 @@ QDF.ICONS = {
   copy: '<rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-6A1.5 1.5 0 0 0 4 5.5v6A1.5 1.5 0 0 0 5.5 13H7"/>',
   clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.5V10l2.5 1.5"/>',
   down: '<path d="M10 4v11M5.5 10.5L10 15l4.5-4.5"/>',
+  parallel: '<path d="M6 3.5v13M6 8c0 3 8 2 8 5v3.5"/><circle cx="6" cy="3.5" r="1.2" fill="currentColor"/><circle cx="14" cy="16.5" r="1.2" fill="currentColor"/>',
+  target: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.6"/><circle cx="10" cy="10" r=".6" fill="currentColor"/>',
+  stopwatch: '<circle cx="10" cy="11" r="6"/><path d="M10 11V7.8M8 2.8h4M10 2.8V5M15 5.5l1.2-1.2"/>',
+  stopwatchOff: '<path d="M6.2 6.4A6 6 0 0 0 14.6 14.8M8 5.3a6 6 0 0 1 8 5.7M8 2.8h4M10 2.8V5M3 3l14 14"/>',
   gear: '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4"/><circle cx="10" cy="10" r="5.2"/>',
   palette: '<path d="M10 3a7 7 0 1 0 0 14c1.2 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H14a3 3 0 0 0 3-3c0-3.9-3.1-7-7-7z"/><circle cx="6.5" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="12.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>',
   database: '<ellipse cx="10" cy="5" rx="6" ry="2.3"/><path d="M4 5v10c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3V5M4 10c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3"/>',
@@ -4130,7 +4138,8 @@ QDF.view.idleLevel = function (sec) {
 
 QDF.view.idle = function (s, now) {
   var sec = QDF.model.idle(s, now);
-  return '<button type="button" class="idle-chip" id="idle-chip" data-act="check-in" data-level="' +
+  return '<span class="idle-calm timer-alt">Timers are hidden</span>' +
+    '<button type="button" class="idle-chip timer" id="idle-chip" data-act="check-in" data-level="' +
       QDF.view.idleLevel(sec) + '" title="Time since you last changed anything here. Click to check in without changing anything.">' +
     '<span class="idle-lamp" aria-hidden="true"></span>' +
     '<span class="idle-text">' +
@@ -4160,13 +4169,19 @@ QDF.view.brandMark = function (prefix) {
 };
 /* ---------- src/js/60-timeline-view.js ---------- */
 /* ==========================================================================
-   60-timeline-view.js — draws the rows from QDF.timeline.build as HTML: a
-   time column, the graph column, and a card for each row.
+   60-timeline-view.js — draws QDF.timeline.build as HTML.
 
-   The graph is drawn per row. Lines are thin bars anchored to the top of the
-   row, the bottom, or both; forks and merges are small SVG curves of fixed
-   height between the row edge and the node, which sits --node-y from the
-   top. So a row can be any height and nothing in the drawing stretches.
+   The past and present are one CSS grid: a time column, the graph column,
+   then one column per lane. Every row of the layout is a grid row; each card
+   is placed in its lane's column and spans the rows its stretch lasted, so
+   tasks that ran together sit side by side. The graph is drawn per row:
+   lines are bars anchored to the top or bottom of the row, forks and merges
+   are fixed-height SVG curves between the row top and the node, which sits
+   --node-y from the top, so rows can be any height without the drawing
+   stretching.
+
+   The queue below the now line is a plain list of rows, so that dragging to
+   reorder it stays simple.
    ========================================================================== */
 
 QDF.view.graphWidth = function (tl) {
@@ -4179,24 +4194,26 @@ QDF.view.timeline = function (tl, s, now, ui) {
   var NY = G.nodeY;
   var W = V.graphWidth(tl);
   var selected = ui && ui.selectedId;
+  var multi = tl.lanes > 1;
 
   function x(L) { return G.laneX0 + L * G.laneW; }
-  function colour(L) { return L === 0 ? 0 : ((L - 1) % 4) + 1; }
+  function colour(L) { return L % 5; }
 
   function line(L, style, part) {
     var pos = part === 'full' ? 'top:0;bottom:0'
       : part === 'top' ? 'top:0;height:' + NY + 'px'
       : 'top:' + NY + 'px;bottom:0';
-    return '<span class="ln ln-' + style + ' lc' + colour(L) + '" style="left:' + x(L) + 'px;' + pos + '"></span>';
+    var lc = style === 'future' ? '' : ' lc' + colour(style === 'idle' ? 0 : L);
+    return '<span class="ln ln-' + style + lc + '" style="left:' + x(L) + 'px;' + pos + '"></span>';
   }
 
-  /* An S-curve from lane a at y0 to lane b at y0 + h, drawn twice: the
-     tube, then a thin highlight along it. */
-  function curve(a, b, y0, h, lane) {
-    var xa = x(a), xb = x(b), m = h / 2;
-    var d = 'M' + xa + ' 0C' + xa + ' ' + m + ' ' + xb + ' ' + m + ' ' + xb + ' ' + h;
-    return '<svg class="curve lc' + colour(lane) + '" style="top:' + y0 + 'px" width="' + W + '" height="' + h +
-      '" viewBox="0 0 ' + W + ' ' + h + '" aria-hidden="true" focusable="false"><path d="' + d + '"/><path d="' + d + '"/></svg>';
+  /* An S-curve from lane a at the row top to lane b at the node line,
+     drawn twice: the tube, then a thin highlight along it. */
+  function curve(a, b, lane) {
+    var xa = x(a), xb = x(b), m = NY / 2;
+    var d = 'M' + xa + ' 0C' + xa + ' ' + m + ' ' + xb + ' ' + m + ' ' + xb + ' ' + NY;
+    return '<svg class="curve lc' + colour(lane) + '" width="' + W + '" height="' + NY +
+      '" viewBox="0 0 ' + W + ' ' + NY + '" aria-hidden="true" focusable="false"><path d="' + d + '"/><path d="' + d + '"/></svg>';
   }
 
   function node(L, cls, inner) {
@@ -4205,39 +4222,27 @@ QDF.view.timeline = function (tl, s, now, ui) {
 
   function graph(r) {
     var h = [];
-    r.lanesIn.forEach(function (L) {
-      if (r.lanesOut.indexOf(L) !== -1 && !(r.type === 'bg' && L === r.lane)) h.push(line(L, 'bg', 'full'));
+    r.through.forEach(function (L) { h.push(line(L, 'solid', 'full')); });
+    r.merges.forEach(function (m) {
+      h.push(m.from === m.to ? line(m.from, 'solid', 'top') : curve(m.from, m.to, m.from));
     });
-    if (r.type === 'bg') {
-      h.push(curve(0, r.lane, 0, NY, r.lane));
-      if (r.lanesOut.indexOf(r.lane) !== -1) h.push(line(r.lane, 'bg', 'bottom'));
+    if (r.type === 'start') {
+      if (r.ending.indexOf(r.lane) !== -1) h.push(line(r.lane, 'solid', 'top'));
+      else if (r.fork !== null) h.push(curve(r.fork, r.lane, r.lane));
+      else if (r.idleIn) h.push(line(0, 'idle', 'top'));
+      h.push(line(r.lane, 'solid', 'bottom'));
+      var sg = r.seg;
+      h.push(sg.open
+        ? node(r.lane, r.foreground ? 'node-present' : 'node-running')
+        : sg.outcome === 'done' ? node(r.lane, 'node-done', I('check')) : node(r.lane, ''));
+    } else {
+      if (r.idleIn) h.push(line(0, 'idle', 'top'));
+      if (r.idleOut) h.push(line(0, 'idle', 'bottom'));
     }
-    if (r.type === 'bgEnd' && r.lane) {
-      h.push(line(r.lane, 'bg', 'top'));
-      h.push(curve(r.lane, 0, NY, (r.height || 44) - NY, r.lane));
-    }
-    if (r.mergeLane) h.push(curve(r.mergeLane, 0, 0, NY, r.mergeLane));
-    if (r.type === 'now') {
-      (r.endLanes || []).forEach(function (L) {
-        h.push(line(L, 'bg', 'top'));
-        h.push('<span class="end-cap lc' + colour(L) + '" style="left:' + x(L) + 'px"></span>');
-      });
-    }
-    if (r.main) {
-      if (r.main.through) h.push(line(0, r.main.in, 'full'));
-      else {
-        if (r.main.in) h.push(line(0, r.main.in, 'top'));
-        if (r.main.out) h.push(line(0, r.main.out, 'bottom'));
-      }
-    }
-    switch (r.type) {
-      case 'focus': h.push(r.outcome === 'done' ? node(0, 'node-done', I('check')) : node(0, '')); break;
-      case 'present': h.push(node(0, 'node-present')); break;
-      case 'bg': h.push(node(r.lane, r.open ? 'node-running' : 'node-small')); break;
-      case 'bgEnd': h.push(r.outcome === 'done' ? node(r.lane, 'node-done', I('check')) : node(r.lane, 'node-hollow node-small')); break;
-      case 'future': h.push(node(0, 'node-future' + (r.index === 0 ? ' node-next' : ''))); break;
-      case 'add': h.push(node(0, 'node-add', I('plus'))); break;
-    }
+    r.caps.forEach(function (L) {
+      h.push(line(L, 'solid', 'top'));
+      h.push('<span class="end-cap lc' + colour(L) + '" style="left:' + x(L) + 'px"></span>');
+    });
     return h.join('');
   }
 
@@ -4245,8 +4250,8 @@ QDF.view.timeline = function (tl, s, now, ui) {
 
   function time(r) {
     switch (r.type) {
-      case 'focus': case 'bg': case 'present': return U.esc(U.timeOfDay(r.stretch.from));
-      case 'bgEnd': return U.esc(U.timeOfDay(r.stretch.to));
+      case 'start': return U.esc(U.timeOfDay(r.seg.stretch.from));
+      case 'tick': return '<span class="tl-tick-time">' + U.esc(U.timeOfDay(U.iso(r.t))) + '</span>';
       case 'now': return T('tod', null, 0, now);
       default: return '';
     }
@@ -4254,154 +4259,168 @@ QDF.view.timeline = function (tl, s, now, ui) {
 
   var OUTCOME = {
     done: '<span class="chip chip-done">' + I('check') + 'Done</span>',
-    background: '<span class="chip">' + I('background') + 'To background</span>',
     paused: '<span class="chip">' + I('pause') + 'Paused</span>'
   };
 
-  function body(r) {
-    var item = r.item, id = item ? U.esc(item.id) : '';
-    switch (r.type) {
-      case 'day':
-        return '<span class="tl-day-name">' + U.esc(U.dayLabel(U.iso(r.t), now)) + '</span>' +
-          '<span class="tl-day-date">' + U.esc(U.longDate(U.iso(r.t), now)) + '</span><hr class="etched">';
+  function dot(lane) {
+    return multi ? '<span class="lane-dot lc' + colour(lane) + '" aria-hidden="true"></span>' : '';
+  }
 
-      case 'focus':
-        return '<div class="tl-card is-past' + sel(item.id) + '" data-select="' + id + '" tabindex="0">' +
-          '<div class="tl-title">' + U.esc(item.title) + '</div>' +
-          '<div class="tl-meta"><span>' + U.esc(U.duration(r.sec)) + '</span><span>until ' +
-            U.esc(U.timeOfDay(r.stretch.to)) + '</span>' + OUTCOME[r.outcome] + '</div>' +
-        '</div>';
+  function card(sg) {
+    var item = sg.item, id = U.esc(item.id);
+    var place = 'grid-row:' + (sg.startRow + 1) + '/' + (sg.endRow + 1) + ';grid-column:' + (3 + sg.lane);
+    if (sg.open) {
+      return V.running(sg, s, now, {
+        place: place,
+        foreground: M.foreground(s) === item,
+        selected: item.id === selected,
+        dot: dot(sg.lane)
+      });
+    }
+    return '<div class="tl-card is-past' + sel(item.id) + '" style="' + place + ';min-height:' + sg.height + 'px" data-select="' + id + '" tabindex="0">' +
+      '<div class="tl-title">' + dot(sg.lane) + U.esc(item.title) + '</div>' +
+      '<div class="tl-meta"><span>' + U.esc(U.duration(sg.sec)) + '</span><span>until ' +
+        U.esc(U.timeOfDay(sg.stretch.to)) + '</span>' + OUTCOME[sg.outcome] + '</div>' +
+    '</div>';
+  }
 
-      case 'gap':
-        return '<div class="tl-line">Nothing in focus for ' + U.esc(U.duration(r.sec)) + '</div>';
-
-      case 'bg':
-        return '<div class="tl-card tl-card-bg lc' + (((r.lane - 1) % 4) + 1) + (r.open ? '' : ' is-past') + sel(item.id) +
-            '" data-select="' + id + '" tabindex="0">' +
-          '<div class="tl-title">' + U.esc(item.title) + '</div>' +
-          (r.open
-            ? '<div class="tl-meta">Running in the background for ' + T('durp', r.stretch.from, 0, now) + '</div>' +
-              '<div class="tl-bg-run"><div class="pole-track" aria-hidden="true"><div class="pole"></div></div>' +
-                '<button type="button" class="btn btn-sm" data-act="start" data-id="' + id + '" title="Bring it into focus; what you are on now becomes up next">' +
-                  I('forward') + '<span>Bring forward</span></button>' +
-                '<button type="button" class="btn btn-sm btn-go" data-act="finish" data-id="' + id + '">' + I('check') + '<span>Done</span></button>' +
-              '</div>'
-            : '<div class="tl-meta"><span>In the background ' + U.esc(U.duration(r.sec)) + '</span><span>until ' +
-              U.esc(U.timeOfDay(r.stretch.to)) + '</span></div>') +
-        '</div>';
-
-      case 'bgEnd':
-        var what = r.outcome === 'done' ? 'finished in the background'
-          : r.outcome === 'queued' ? 'went back to the queue' : 'left the background';
-        return '<div class="tl-line" data-select="' + id + '">' +
-          '<b>' + U.esc(item.title) + '</b> ' + what + '</div>';
-
-      case 'present':
-        return V.present(r, s, now, item.id === selected);
-
-      case 'now':
-        return '<span class="now-tag">Now</span>' + (s.current ? '' : V.nowEmpty(s, now, r));
-
-      case 'future':
-        var started = M.started(item);
-        return '<div class="tl-card is-future' + (r.index === 0 ? ' is-next' : '') + sel(item.id) +
-            '" draggable="true" data-drag-id="' + id + '" data-select="' + id + '" tabindex="0">' +
-          '<div class="tl-title">' + (r.index === 0 ? '<span class="chip chip-next">Up next</span> ' : '') + U.esc(item.title) + '</div>' +
-          (U.firstLine(item.notes) ? '<div class="tl-note">' + U.esc(U.firstLine(item.notes)) + '</div>' : '') +
-          '<div class="tl-meta">' + (started
-            ? '<span>Paused</span><span>' + U.esc(U.duration(M.focusTotal(item, now))) + ' focused so far</span>'
-            : '<span>Added ' + T('ago', item.created, 0, now) + '</span>') + '</div>' +
-          '<div class="tl-tools">' +
-            tool('play', 'start', 'Start now', item) +
-            (r.index === 0 ? '' : tool('up', 'make-next', 'Do this next', item)) +
-          '</div>' +
-        '</div>';
-
-      case 'add':
-        return '<form class="add-form" data-form="add" autocomplete="off">' +
-            '<input class="field" id="add-input" name="title" maxlength="300" placeholder="Add a task to the queue…" aria-label="Add a task to the queue">' +
-            '<button type="submit" class="btn">' + I('plus') + '<span>Add</span></button>' +
-          '</form>' +
-          '<div class="add-hint"><kbd>Enter</kbd> adds to the end · <kbd>Shift</kbd>+<kbd>Enter</kbd> adds as up next</div>';
+  function band(r, i) {
+    var place = 'grid-row:' + (i + 1) + ';grid-column:3/-1';
+    if (r.type === 'day') {
+      return '<div class="tl-day" style="' + place + '"><span class="tl-day-name">' + U.esc(U.dayLabel(U.iso(r.t), now)) + '</span>' +
+        '<span class="tl-day-date">' + U.esc(U.longDate(U.iso(r.t), now)) + '</span><hr class="etched"></div>';
+    }
+    if (r.type === 'gap') {
+      return '<div class="tl-line tl-gap" style="' + place + '">Nothing running for ' + U.esc(U.duration(r.sec)) + '</div>';
+    }
+    if (r.type === 'now') {
+      return '<div class="tl-nowline" id="tl-now" data-drop="now" style="grid-row:' + (i + 1) + ';grid-column:2/-1">' +
+        '<span class="now-tag">Now</span>' + (s.active.length ? '' : V.nowEmpty(s, now, r)) + '</div>';
     }
     return '';
   }
 
+  /* -------------------------------------------------- past and present */
+  /* Lanes shrink to fit a narrow stage (drawers open) before the timeline
+     has to scroll sideways. */
+  var cols = '58px ' + W + 'px repeat(' + tl.lanes + ', minmax(200px, ' + tl.cardW + 'px))';
+  var rowsCss = tl.rows.map(function (r) { return 'minmax(' + r.height + 'px, auto)'; }).join(' ');
+  var cells = [];
+  tl.rows.forEach(function (r, i) {
+    var cls = 'tl-cell tl-' + r.type;
+    cells.push('<div class="' + cls + ' tl-time" style="grid-row:' + (i + 1) + ';grid-column:1">' + time(r) + '</div>');
+    cells.push('<div class="' + cls + ' tl-graph" style="grid-row:' + (i + 1) + ';grid-column:2">' + graph(r) + '</div>');
+    cells.push(band(r, i));
+  });
+  tl.segs.forEach(function (sg) { cells.push(card(sg)); });
+
+  var hasPast = tl.segs.length > 0;
+  var out = [
+    '<div class="tl-origin">' + (hasPast ? 'The start of your history' : 'Your history will build up here as you work.') + '</div>',
+    '<div class="tl-grid" style="grid-template-columns:' + cols + ';grid-template-rows:' + rowsCss + '">' + cells.join('') + '</div>'
+  ];
+
+  /* ---------------------------------------------------------- future */
   function tool(icon, act, label, item) {
     return '<button type="button" class="tool" data-act="' + act + '" data-id="' + U.esc(item.id) + '" title="' + label +
       '" aria-label="' + label + ': ' + U.esc(item.title) + '">' + I(icon) + '</button>';
   }
 
-  function rowId(r) {
-    if (r.type === 'day') return 'tl-day-' + r.day;
-    if (r.type === 'present') return 'tl-present';
-    if (r.type === 'now') return 'tl-now';
-    return null;
+  function futureRow(item, index) {
+    var id = U.esc(item.id), first = M.started(item);
+    return '<div class="tl-row tl-future-row" data-row-id="' + id + '">' +
+      '<div class="tl-time"></div>' +
+      '<div class="tl-graph">' + line(0, 'future', 'full') +
+        node(0, 'node-future' + (index === 0 ? ' node-next' : '')) + '</div>' +
+      '<div class="tl-body"><div class="tl-card is-future' + (index === 0 ? ' is-next' : '') + sel(item.id) +
+          '" draggable="true" data-drag-id="' + id + '" data-select="' + id + '" tabindex="0">' +
+        '<div class="tl-title">' + (index === 0 ? '<span class="chip chip-next">Up next</span> ' : '') + U.esc(item.title) + '</div>' +
+        (U.firstLine(item.notes) ? '<div class="tl-note">' + U.esc(U.firstLine(item.notes)) + '</div>' : '') +
+        '<div class="tl-meta">' + (first
+          ? '<span>Paused</span><span>' + U.esc(U.duration(M.total(item, now))) + ' so far</span>'
+          : '<span>Added ' + T('ago', item.created, 0, now) + '</span>') + '</div>' +
+        '<div class="tl-tools">' +
+          tool('play', 'start', 'Start now, alongside anything running', item) +
+          (index === 0 ? '' : tool('up', 'make-next', 'Do this next', item)) +
+        '</div>' +
+      '</div></div>' +
+    '</div>';
   }
 
-  var FILL = { focus: true };
-  var hasPast = tl.rows.some(function (r) { return r.type === 'focus' || r.type === 'bg'; });
-  var out = ['<div class="tl-origin">' + (hasPast ? 'The start of your history' : 'Your history will build up here as you work.') + '</div>'];
-  var inFuture = false;
+  /* The queue keeps a comfortable width even when many lanes made the
+     cards above narrow. */
+  out.push('<div class="tl-future" data-drop="future" style="--col-w:' + Math.max(tl.cardW, 360) + 'px">' +
+    tl.future.map(futureRow).join('') +
+    '<div class="tl-row tl-add">' +
+      '<div class="tl-time"></div>' +
+      '<div class="tl-graph">' + line(0, 'future', 'top') + node(0, 'node-add', I('plus')) + '</div>' +
+      '<div class="tl-body"><form class="add-form" data-form="add" autocomplete="off">' +
+          '<input class="field" id="add-input" name="title" maxlength="300" placeholder="Add a task to the queue…" aria-label="Add a task to the queue">' +
+          '<button type="submit" class="btn">' + I('plus') + '<span>Add</span></button>' +
+        '</form>' +
+        '<div class="add-hint"><kbd>Enter</kbd> queues it · <kbd>Shift</kbd>+<kbd>Enter</kbd> makes it up next · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> starts it now</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>');
 
-  tl.rows.forEach(function (r) {
-    if (!inFuture && (r.type === 'future' || r.type === 'add')) {
-      out.push('<div class="tl-future" data-drop="future">');
-      inFuture = true;
-    }
-    var id = rowId(r);
-    out.push('<div class="tl-row tl-' + r.type + (FILL[r.type] ? ' tl-fill' : '') + '"' +
-      (id ? ' id="' + id + '"' : '') +
-      (r.type === 'future' ? ' data-row-id="' + U.esc(r.item.id) + '"' : '') +
-      (r.height ? ' style="min-height:' + r.height + 'px"' : '') + '>' +
-      '<div class="tl-time">' + time(r) + '</div>' +
-      '<div class="tl-graph">' + graph(r) + '</div>' +
-      '<div class="tl-body">' + body(r) + '</div>' +
-    '</div>');
-  });
-  if (inFuture) out.push('</div>');
   return out.join('');
 };
 /* ---------- src/js/62-present.js ---------- */
 /* ==========================================================================
-   62-present.js — the present: the card for the task in focus, and what the
-   now row shows when nothing is in focus.
+   62-present.js — the present: a card for each running task, and what the
+   now line shows when nothing is running.
+
+   A running card spans the timeline from when the task started down to the
+   now line, beside anything else that ran meanwhile. Its title sticks to
+   the top of the view and its controls to the bottom, so a task that has
+   been running for hours stays usable without scrolling. The foreground
+   task gets the clock and the prominent controls; the others can be brought
+   to the foreground with one click, which records nothing in the history.
+
+   Elements with class "timer" are hidden when timers are switched off;
+   "timer-alt" ones are shown instead.
    ========================================================================== */
 
-QDF.view.present = function (r, s, now, isSelected) {
+QDF.view.running = function (sg, s, now, opts) {
   var U = QDF.util, M = QDF.model, I = QDF.icon, T = QDF.view.tick;
-  var c = r.item, id = U.esc(c.id), next = M.upNext(s);
-  var open = r.stretch;
-  var banked = M.focusTotal(c, now) - M.live(c, now);
-  var bg = M.backgroundTotal(c, now);
+  var item = sg.item, id = U.esc(item.id), next = M.upNext(s), fg = opts.foreground;
+  var open = sg.stretch;
+  var banked = M.total(item, now) - M.live(item, now);
+
+  var actions = fg
+    ? '<button type="button" class="btn btn-go" data-act="done-next" data-id="' + id + '" id="btn-done-next">' + I('check') +
+        '<span>' + (next ? 'Done, start next' : 'Done') + '</span></button>' +
+      (next ? '<button type="button" class="btn" data-act="start-next" title="Start up next (' + U.esc(next.title) + ') alongside this">' +
+        I('parallel') + '<span>Start next too</span></button>' : '')
+    : '<button type="button" class="btn" data-act="foreground" data-id="' + id + '" title="Make this the task you are attending to. Nothing is recorded in the history.">' +
+        I('target') + '<span class="narrow-hide">Foreground</span></button>' +
+      '<button type="button" class="btn btn-go" data-act="finish" data-id="' + id + '">' + I('check') + '<span>Done</span></button>';
 
   return '' +
-    '<div class="present-card' + (isSelected ? ' is-selected' : '') + '" data-drop="now" data-select="' + id + '" tabindex="0">' +
-      '<div class="pc-main">' +
-        '<div class="eyebrow label"><span class="live-lamp" aria-hidden="true"></span>Working on now</div>' +
-        '<div class="pc-title">' + U.esc(c.title) + '</div>' +
-        (c.notes ? '<div class="pc-notes">' + U.esc(c.notes) + '</div>' : '') +
-        '<div class="pc-actions">' +
-          '<button type="button" class="btn btn-go" data-act="done-next" id="btn-done-next">' + I('check') +
-            '<span>' + (next ? 'Done, start next' : 'Done') + '</span></button>' +
-          '<button type="button" class="btn" data-act="to-background" title="It carries on without you (a build, a render, an upload)' +
-            (next ? '; up next comes into focus' : '') + '.">' + I('background') + '<span>To background</span></button>' +
-          '<button type="button" class="btn btn-icon" data-act="now-menu" aria-haspopup="menu" aria-expanded="false" aria-label="More actions" title="More actions">' +
+    '<div class="run-card' + (fg ? ' is-foreground' : '') + (opts.selected ? ' is-selected' : '') + '" style="' + opts.place + '" ' +
+        (fg ? 'id="tl-present" ' : '') + 'data-select="' + id + '" data-drop="now" tabindex="0">' +
+      '<div class="run-head">' +
+        '<div class="eyebrow label"><span class="live-lamp' + (fg ? '' : ' is-dim') + '" aria-hidden="true"></span>' +
+          (fg ? 'In the foreground' : 'Running alongside') + '</div>' +
+        '<div class="run-title">' + opts.dot + U.esc(item.title) + '</div>' +
+      '</div>' +
+      (fg && item.notes ? '<div class="run-notes">' + U.esc(item.notes) + '</div>' : '') +
+      '<div class="run-foot">' +
+        (fg
+          ? '<div class="clock-face timer"><div class="clock-label">Since started</div>' +
+              '<div class="clock-digits">' + T('clock', M.started(item), 0, now) + '</div></div>' +
+            '<dl class="pc-stats timer">' +
+              '<dt>This stretch</dt><dd>' + T('durp', open.from, 0, now) + '</dd>' +
+              '<dt>Running in all</dt><dd>' + T('dur', open.from, banked, now) + '</dd>' +
+            '</dl>'
+          : '<div class="run-time timer">Running for ' + T('durp', open.from, 0, now) + '</div>') +
+        '<div class="run-time timer-alt">Started at ' + U.esc(U.timeOfDay(M.started(item))) + '</div>' +
+        '<div class="run-actions">' + actions +
+          '<button type="button" class="btn btn-icon" data-act="task-menu" data-id="' + id + '" aria-haspopup="menu" aria-expanded="false" aria-label="More actions" title="More actions">' +
             I('more') + '</button>' +
         '</div>' +
       '</div>' +
-      '<div class="pc-side">' +
-        '<div class="clock-face">' +
-          '<div class="clock-label">Since started</div>' +
-          '<div class="clock-digits">' + T('clock', M.started(c), 0, now) + '</div>' +
-        '</div>' +
-        '<dl class="pc-stats">' +
-          '<dt>This stretch</dt><dd>' + T('durp', open.from, 0, now) + '</dd>' +
-          '<dt>Focused in all</dt><dd>' + T('dur', open.from, banked, now) + '</dd>' +
-          (bg ? '<dt>In background</dt><dd>' + U.esc(U.duration(bg)) + '</dd>' : '') +
-        '</dl>' +
-      '</div>' +
-      '<div class="drop-hint" aria-hidden="true">Drop to start now</div>' +
+      '<div class="drop-hint" aria-hidden="true">Drop to start it alongside</div>' +
     '</div>';
 };
 
@@ -4409,9 +4428,9 @@ QDF.view.nowEmpty = function (s, now, r) {
   var U = QDF.util, I = QDF.icon, T = QDF.view.tick;
   var next = QDF.model.upNext(s);
   return '' +
-    '<div class="now-empty" data-drop="now">' +
-      '<div class="now-empty-title">Nothing in focus' +
-        (r.idleSince ? ' for ' + T('dur', r.idleSince, 0, now) : '') + '</div>' +
+    '<div class="now-empty">' +
+      '<div class="now-empty-title">Nothing running' +
+        (r.idleSince ? '<span class="timer"> for ' + T('dur', r.idleSince, 0, now) + '</span>' : '') + '</div>' +
       '<p class="now-empty-text">' + (next
         ? 'Up next is <b>' + U.esc(next.title) + '</b>.'
         : 'What are you working on?') + '</p>' +
@@ -4423,100 +4442,120 @@ QDF.view.nowEmpty = function (s, now, r) {
           '" aria-label="Start a new task">' +
         '<button type="submit" class="btn">' + I('play') + '<span>Start</span></button>' +
       '</form>' +
-      '<div class="drop-hint" aria-hidden="true">Drop to start now</div>' +
+      '<div class="drop-hint" aria-hidden="true">Drop to start it</div>' +
     '</div>';
 };
 /* ---------- src/js/64-overview.js ---------- */
 /* ==========================================================================
    64-overview.js — the left drawer: today at a glance, what is going on
    right now, and a list of days to jump to on the timeline.
+
+   With tasks running in parallel, "time running" means time with at least
+   one task running (the union of stretches), not the sum of them.
    ========================================================================== */
 
 QDF.view.overview = function (s, now) {
   var U = QDF.util, M = QDF.model, T = QDF.view.tick;
   var t0 = U.dayStart(now);
-  var all = s.done.concat(s.current ? [s.current] : [], s.background, s.queue);
+  var all = s.done.concat(s.active, s.queue);
+
+  /* Merge intervals into their union; returns total seconds. */
+  function unionSeconds(spans) {
+    var sorted = spans.slice().sort(function (a, b) { return a[0] - b[0]; });
+    var total = 0, cur = null;
+    sorted.forEach(function (sp) {
+      if (!cur || sp[0] > cur[1]) { if (cur) total += cur[1] - cur[0]; cur = [sp[0], sp[1]]; }
+      else cur[1] = Math.max(cur[1], sp[1]);
+    });
+    if (cur) total += cur[1] - cur[0];
+    return Math.floor(total / 1000);
+  }
 
   /* ----------------------------------------------------------- today */
-  var focusBanked = 0, longest = 0, switches = 0, first = null, openFrom = null;
-  var focusSegs = [], bgSegs = [];
+  var spans = [], longest = 0;
   all.forEach(function (item) {
     item.stretches.forEach(function (st) {
       var a = U.ms(st.from), b = st.to ? U.ms(st.to) : now;
       if (b <= t0) return;
       a = Math.max(a, t0);
-      var sec = Math.max(0, (b - a) / 1000);
-      if (first === null || a < first) first = a;
-      if (st.kind === 'focus') {
-        if (st.to) focusBanked += sec; else openFrom = U.iso(a);
-        longest = Math.max(longest, sec);
-        switches++;
-        focusSegs.push([a, b]);
-      } else {
-        bgSegs.push([a, b]);
-      }
+      spans.push([a, b, !st.to]);
+      longest = Math.max(longest, (b - a) / 1000);
     });
   });
+  var running = unionSeconds(spans);
   var doneToday = s.done.filter(function (d) { return U.ms(d.finished) >= t0; }).length;
 
+  /* Most at once: sweep the starts and ends. */
+  var edges = [];
+  spans.forEach(function (sp) { edges.push([sp[0], 1], [sp[1], -1]); });
+  edges.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+  var most = 0, level = 0;
+  edges.forEach(function (e) { level += e[1]; most = Math.max(most, level); });
+
+  function tile(value, label, cls) {
+    return '<div class="tile' + (cls ? ' ' + cls : '') + '"><div class="tile-value">' + value + '</div><div class="tile-label">' + label + '</div></div>';
+  }
+
   var tiles =
-    tile(T('dur', openFrom, focusBanked, now), 'Focused today') +
+    tile(s.active.length ? T('dur', U.iso(now), running, now) : U.esc(U.duration(running)), 'Running today', s.active.length ? 'timer' : '') +
     tile(String(doneToday), doneToday === 1 ? 'Task done' : 'Tasks done') +
     tile(U.esc(U.duration(longest)), 'Longest stretch') +
-    tile(String(switches), switches === 1 ? 'Stretch of focus' : 'Stretches of focus');
+    tile(String(most), 'Most at once');
 
+  /* The day at a glance: one track per lane, filled greedily. */
   var ribbon = '';
-  if (first !== null) {
+  if (spans.length) {
+    var first = Math.min.apply(null, spans.map(function (sp) { return sp[0]; }));
     var start = Math.floor(first / 3600000) * 3600000;
     var end = Math.max(start + 3600000, Math.ceil(now / 3600000) * 3600000);
     var range = end - start;
     var pct = function (v) { return ((v - start) / range * 100).toFixed(3) + '%'; };
-    var w = function (a, b) { return ((b - a) / range * 100).toFixed(3) + '%'; };
+    var tracks = [];
+    spans.slice().sort(function (a, b) { return a[0] - b[0]; }).forEach(function (sp) {
+      var k = 0;
+      while (tracks[k] && tracks[k] > sp[0]) k++;
+      tracks[k] = sp[1];
+      sp.track = k;
+    });
+    var n = Math.min(tracks.length, 4), h = Math.floor(22 / n);
     var ticks = '';
-    for (var h = start + 3600000; h < end; h += 3600000) ticks += '<span class="rb-tick" style="left:' + pct(h) + '"></span>';
+    for (var hh = start + 3600000; hh < end; hh += 3600000) ticks += '<span class="rb-tick" style="left:' + pct(hh) + '"></span>';
     ribbon =
-      '<div class="ribbon" role="img" aria-label="Today: focus on the upper track, background work on the lower">' + ticks +
-        focusSegs.map(function (g) { return '<span class="rb-seg rb-focus lc0" style="left:' + pct(g[0]) + ';width:' + w(g[0], g[1]) + '"></span>'; }).join('') +
-        bgSegs.map(function (g) { return '<span class="rb-seg rb-bg lc1" style="left:' + pct(g[0]) + ';width:' + w(g[0], g[1]) + '"></span>'; }).join('') +
+      '<div class="ribbon" role="img" aria-label="Today: when tasks were running, one track for each task running at once">' + ticks +
+        spans.filter(function (sp) { return sp.track < 4; }).map(function (sp) {
+          return '<span class="rb-seg lc' + (sp.track % 5) + '" style="left:' + pct(sp[0]) + ';width:' +
+            ((sp[1] - sp[0]) / range * 100).toFixed(3) + '%;top:' + (4 + sp.track * (h + 1)) + 'px;height:' + (h - 1) + 'px"></span>';
+        }).join('') +
       '</div>' +
       '<div class="rb-scale"><span>' + U.esc(U.timeOfDay(U.iso(start))) + '</span><span>' + U.esc(U.timeOfDay(U.iso(end))) + '</span></div>';
   }
 
-  function tile(value, label) {
-    return '<div class="tile"><div class="tile-value">' + value + '</div><div class="tile-label">' + label + '</div></div>';
-  }
-
   /* ------------------------------------------------------- right now */
-  var next = M.upNext(s);
+  var fg = M.foreground(s), next = M.upNext(s);
   function row(key, value) {
     return '<div class="ov-row"><span class="ov-key">' + key + '</span><span class="ov-val">' + value + '</span></div>';
   }
+  var others = s.active.length - (fg ? 1 : 0);
   var rightNow =
-    row('In focus', s.current ? U.esc(s.current.title) : '<span class="dim">Nothing</span>') +
+    row('Foreground', fg ? U.esc(fg.title) : '<span class="dim">Nothing running</span>') +
+    row('Alongside', others ? U.esc(U.plural(others, 'other task')) : '<span class="dim">Nothing else</span>') +
     row('Up next', next ? U.esc(next.title) : '<span class="dim">Nothing queued</span>') +
-    row('Queued', U.esc(U.plural(s.queue.length, 'task'))) +
-    row('Background', s.background.length ? U.esc(s.background.length + ' running') : '<span class="dim">Nothing running</span>');
+    row('Queued', U.esc(U.plural(s.queue.length, 'task')));
 
   /* ------------------------------------------------------------ days */
   var days = {};
-  function day(key) {
-    return days[key] || (days[key] = { key: key, focus: 0, done: 0, t: 0 });
-  }
+  function day(key) { return days[key] || (days[key] = { spans: [], done: 0 }); }
   all.forEach(function (item) {
     item.stretches.forEach(function (st) {
-      if (st.kind !== 'focus') return;
-      var d = day(U.dayKey(st.from));
-      d.focus += M.duration(st, now);
-      d.t = Math.max(d.t, U.ms(st.from));
+      day(U.dayKey(st.from)).spans.push([U.ms(st.from), st.to ? U.ms(st.to) : now]);
     });
   });
   s.done.forEach(function (item) { day(U.dayKey(item.finished)).done++; });
   var list = Object.keys(days).sort().reverse().slice(0, 60).map(function (k) {
     var d = days[k];
-    var iso = k + 'T12:00:00';
     return '<li><button type="button" class="day-link" data-act="jump-day" data-day="' + U.esc(k) + '">' +
-      '<span class="day-name">' + U.esc(U.dayLabel(new Date(iso).toISOString(), now)) + '</span>' +
-      '<span class="day-sub">' + (d.done ? d.done + ' done · ' : '') + U.esc(U.duration(d.focus)) + '</span>' +
+      '<span class="day-name">' + U.esc(U.dayLabel(new Date(k + 'T12:00:00').toISOString(), now)) + '</span>' +
+      '<span class="day-sub">' + (d.done ? d.done + ' done · ' : '') + U.esc(U.duration(unionSeconds(d.spans))) + '</span>' +
     '</button></li>';
   }).join('');
 
@@ -4550,10 +4589,10 @@ QDF.view.inspector = function (s, now, id) {
 
   var item = loc.item, eid = U.esc(item.id);
   var open = M.openStretch(item);
+  var isFg = loc.list === 'active' && M.foreground(s) === item;
   var status = {
-    current: 'In focus',
+    active: isFg ? 'In the foreground' : 'Running alongside',
     queue: loc.index === 0 ? 'Up next' : 'Queued, ' + ordinal(loc.index + 1),
-    background: 'In background',
     done: 'Done'
   }[loc.list];
 
@@ -4568,33 +4607,28 @@ QDF.view.inspector = function (s, now, id) {
   }
 
   /* -------------------------------------------------------------- facts */
-  var focusBanked = 0, bgBanked = 0;
-  item.stretches.forEach(function (st) {
-    if (!st.to) return;
-    if (st.kind === 'focus') focusBanked += M.duration(st, now); else bgBanked += M.duration(st, now);
-  });
+  var banked = M.total(item, now) - M.live(item, now);
   var first = M.started(item);
   var facts = '<dt>Added</dt><dd>' + when(item.created) + '</dd>';
   if (first) {
     facts += '<dt>First started</dt><dd>' + when(first) + '</dd>';
     facts += item.finished
       ? '<dt>Finished</dt><dd>' + when(item.finished) + '</dd><dt>Start to finish</dt><dd>' + U.esc(U.duration(M.span(item))) + '</dd>'
-      : '<dt>Since first start</dt><dd>' + T('dur', first, 0, now) + '</dd>';
-    facts += '<dt>Focused in all</dt><dd>' + (open && open.kind === 'focus' ? T('dur', open.from, focusBanked, now) : U.esc(U.duration(focusBanked))) + '</dd>';
-    if (bgBanked || (open && open.kind === 'background')) {
-      facts += '<dt>In background</dt><dd>' + (open && open.kind === 'background' ? T('dur', open.from, bgBanked, now) : U.esc(U.duration(bgBanked))) + '</dd>';
-    }
+      : '<dt class="timer">Since first start</dt><dd class="timer">' + T('dur', first, 0, now) + '</dd>';
+    facts += open
+      ? '<dt class="timer">Running in all</dt><dd class="timer">' + T('dur', open.from, banked, now) + '</dd>'
+      : '<dt>Running in all</dt><dd>' + U.esc(U.duration(banked)) + '</dd>';
+    facts += '<dt>Stretches</dt><dd>' + item.stretches.length + '</dd>';
   } else {
     facts += '<dt>Started</dt><dd class="dim">Not yet</dd>';
   }
 
-  /* ---------------------------------------------------------- stretches */
+  /* ------------------------------------------------------------ history */
   var stretches = item.stretches.map(function (st) {
     return '<li>' +
-      '<span class="sw ' + (st.kind === 'focus' ? 'lc0' : 'sw-bg lc1') + '" title="' + (st.kind === 'focus' ? 'In focus' : 'In the background') + '"></span>' +
-      '<span class="stretch-when">' + when(st.from) + '–' + (st.to ? U.esc(U.timeOfDay(st.to)) : 'now') +
-        (st.kind === 'focus' ? '' : ' <span class="dim">background</span>') + '</span>' +
-      '<span class="stretch-len">' + (st.to ? U.esc(U.duration(M.duration(st, now))) : T('durp', st.from, 0, now)) + '</span>' +
+      '<span class="sw lc0" aria-hidden="true"></span>' +
+      '<span class="stretch-when">' + when(st.from) + '–' + (st.to ? U.esc(U.timeOfDay(st.to)) : 'now') + '</span>' +
+      '<span class="stretch-len">' + (st.to ? U.esc(U.duration(M.duration(st, now))) : '<span class="timer">' + T('durp', st.from, 0, now) + '</span>') + '</span>' +
     '</li>';
   }).join('');
 
@@ -4603,20 +4637,18 @@ QDF.view.inspector = function (s, now, id) {
     return '<button type="button" class="btn btn-sm btn-block' + (cls ? ' ' + cls : '') + '" data-act="' + name + '" data-id="' + eid + '">' +
       I(icon) + '<span>' + label + '</span></button>';
   }
+  var next = M.upNext(s);
   var actions = {
-    current:
-      act('done-next', 'check', M.upNext(s) ? 'Done, start next' : 'Done', 'btn-go') +
-      act('to-background', 'background', 'Send to background') +
+    active:
+      (isFg ? '' : act('foreground', 'target', 'Bring to the foreground', 'btn-primary')) +
+      (isFg && next ? act('done-next', 'check', 'Done, start next', 'btn-go') : '') +
+      act('finish', 'check', 'Done', isFg && next ? '' : 'btn-go') +
+      (isFg && next ? act('start-next', 'parallel', 'Start up next alongside') : '') +
       act('pause-front', 'pause', 'Pause, keep it up next') +
-      act('pause-end', 'queueEnd', 'Back to the end of the queue') +
-      act('finish', 'check', 'Done, start nothing'),
+      act('pause-end', 'queueEnd', 'Pause, back to the end of the queue'),
     queue:
-      act('start', 'play', 'Start now', 'btn-go') +
+      act('start', 'play', 'Start now, alongside anything running', 'btn-go') +
       (loc.index ? act('make-next', 'up', 'Do this next') : ''),
-    background:
-      act('start', 'forward', 'Bring forward', 'btn-primary') +
-      act('finish', 'check', 'Done', 'btn-go') +
-      act('bg-to-queue', 'up', 'Back to the queue as up next'),
     done:
       act('restore', 'restore', 'Back to the queue')
   }[loc.list] + act('remove', 'trash', loc.list === 'done' ? 'Remove from history' : 'Remove task');
@@ -4732,9 +4764,9 @@ QDF.transfer = (function () {
 
   function summary(st) {
     var bits = [];
-    bits.push(st.current ? '“' + st.current.title + '” in focus' : 'nothing in focus');
+    var fg = QDF.model.foreground(st);
+    bits.push(st.active.length ? U.plural(st.active.length, 'task') + ' running' + (fg ? ' (“' + fg.title + '” in the foreground)' : '') : 'nothing running');
     bits.push(U.plural(st.queue.length, 'queued', 'queued'));
-    bits.push(st.background.length + ' in background');
     bits.push(st.done.length + ' done');
     return bits.join(', ');
   }
@@ -4861,6 +4893,8 @@ QDF.settings = (function () {
     ['.', 'Jump to now'],
     ['N', 'Add a task to the queue'],
     ['Shift + Enter', 'In the add box: add as up next'],
+    ['Ctrl + Enter', 'In the add box: start it now'],
+    ['T', 'Show or hide timers'],
     ['[', 'Open or close the overview'],
     [']', 'Open or close the inspector'],
     ['Ctrl + Z', 'Undo the last change (⌘ Z on a Mac)'],
@@ -4936,8 +4970,9 @@ QDF.settings = (function () {
       '<div class="about-head"><div class="about-mark" aria-hidden="true">' + QDF.view.brandMark('bm-about') + '</div>' +
         '<div><div class="about-name">' + U.esc(QDF.APP.name) + '</div>' +
         '<div class="dim">Version ' + U.esc(QDF.APP.version) + ' · format ' + U.esc(QDF.APP.format) + '</div></div></div>' +
-      '<p>A timeline of your attention: what you worked on, what you are on now, and what could come next. ' +
-        'Work handed to a machine branches off the main line and merges back when you return to it.</p>' +
+      '<p>A timeline of your work: what you did, what is running now, and what could come next. ' +
+        'Tasks can run in parallel; they branch off side by side and join back up when they end. ' +
+        'Pick one to keep in the foreground — the history only records that they ran.</p>' +
       '<p>Everything stays in this browser. Export the YAML to keep a copy, and import it to resume.</p>' +
       '<table class="keys"><tbody>' + KEYS.map(function (k) {
         return '<tr><td>' + k[0].split(' + ').map(function (p) { return '<kbd>' + U.esc(p) + '</kbd>'; }).join(' + ') +
@@ -5058,6 +5093,7 @@ QDF.keys = (function () {
       case '[': e.preventDefault(); A['toggle-overview'](); break;
       case ']': e.preventDefault(); A['toggle-inspector'](); break;
       case 'y': case 'Y': e.preventDefault(); QDF.transfer.showYaml(); break;
+      case 't': case 'T': e.preventDefault(); A['toggle-timers'](); break;
       case ',': e.preventDefault(); QDF.settings.show(); break;
       case '?': e.preventDefault(); QDF.settings.show('about'); break;
       case 'Escape': QDF.app.select(null); break;
@@ -5100,7 +5136,7 @@ QDF.app = (function () {
   /* ---------------------------------------------------- keeping "now" */
 
   function scroller() { return $('timeline-scroll'); }
-  function anchor() { return $('tl-present') || $('tl-now'); }
+  function anchor() { return $('tl-now'); }
 
   /* Where the present sits in the viewport, so a re-render that adds a row
      above it (a task finished, say) can keep it exactly where it was. */
@@ -5115,7 +5151,9 @@ QDF.app = (function () {
     var el = anchor(), sc = scroller();
     if (!el || !sc) return;
     var top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top;
-    var target = sc.scrollTop + top - Math.round(sc.clientHeight * 0.3);
+    /* The now line sits low in the view: the running cards end just above
+       it, and the queue starts just below. */
+    var target = sc.scrollTop + top - Math.round(sc.clientHeight * 0.68);
     if (sc.scrollTo) sc.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
     else sc.scrollTop = target;
   }
@@ -5232,8 +5270,9 @@ QDF.app = (function () {
       var level = V.idleLevel(M.idle(s, now));
       if (chip.getAttribute('data-level') !== level) chip.setAttribute('data-level', level);
     }
-    var title = s.current
-      ? U.clock(M.elapsed(s.current, now)) + ' \u00b7 ' + s.current.title + ' \u2014 ' + QDF.APP.name
+    var fg = M.foreground(s);
+    var title = fg
+      ? (P.get('timers') ? U.clock(M.elapsed(fg, now)) + ' \u00b7 ' : '') + fg.title + ' \u2014 ' + QDF.APP.name
       : QDF.APP.name;
     if (document.title !== title) document.title = title;
     /* "Today" and "Yesterday" move at midnight; a new minute moves the
@@ -5268,14 +5307,19 @@ QDF.app = (function () {
     input.select();
   }
 
-  function addFromInput(asNext) {
+  /* How the add box was submitted: 'end', 'next' (Shift) or 'start' (Ctrl). */
+  function addFromInput(how) {
     var input = $('add-input');
     var title = input.value;
     if (!title.trim()) { input.focus(); return; }
     input.value = '';
-    commit(asNext ? 'Add task as up next' : 'Add task', function (s, now) {
-      return M.add(s, title, '', { next: asNext }, now);
-    });
+    if (how === 'start') {
+      commit('Start task', function (s, now) { return M.addAndStart(s, title, '', now); });
+    } else {
+      commit(how === 'next' ? 'Add task as up next' : 'Add task', function (s, now) {
+        return M.add(s, title, '', { next: how === 'next' }, now);
+      });
+    }
     focusAdd();
   }
 
@@ -5287,13 +5331,20 @@ QDF.app = (function () {
     commit('Start task', function (s, now) { return M.addAndStart(s, title, '', now); });
   }
 
+  function alongside(s, item) {
+    var others = s.active.filter(function (x) { return x.id !== item.id; });
+    return others.length ? ' alongside ' + (others.length === 1 ? q(others[0].title) : U.plural(others.length, 'other task')) : '';
+  }
+
   function startTask(id) {
+    var before = S.get();
     var r = commit('Start task', function (s, now) { return M.start(s, id, now); });
-    if (!r) return;
-    if (r.from === 'background' || r.previous) {
-      ui.toast((r.from === 'background' ? 'Brought ' + q(r.item.title) + ' forward' : 'Started ' + q(r.item.title)) +
-        (r.previous ? '; ' + q(r.previous.title) + ' is up next.' : '.'), { undo: true });
-    }
+    if (r && before.active.length) ui.toast('Started ' + q(r.title) + alongside(S.get(), r) + '.', { undo: true });
+  }
+
+  function startNext() {
+    var r = commit('Start up next', function (s, now) { return M.startNext(s, now); });
+    if (r) ui.toast('Started ' + q(r.title) + alongside(S.get(), r) + '.', { undo: true });
   }
 
   function finishTask(id) {
@@ -5301,18 +5352,34 @@ QDF.app = (function () {
     if (r) ui.toast('Done: ' + q(r.title) + '.', { undo: true });
   }
 
+  function finishAndNext(id) {
+    var r = commit('Finish task', function (s, now) { return M.finishAndNext(s, id, now); });
+    if (r) ui.toast('Done: ' + q(r.done.title) + (r.next ? '. Started ' + q(r.next.title) + '.' : '.'), { undo: true });
+  }
+
   function removeTask(id) {
     var r = commit('Remove task', function (s) { return M.remove(s, id); });
     if (r) ui.toast('Removed ' + q(r.title) + '.', { undo: true });
   }
 
-  function pauseCurrent(where) {
+  function pauseTask(id, where) {
     var r = commit(where === 'end' ? 'Move to end of queue' : 'Pause task', function (s, now) {
-      return M.pause(s, now, where);
+      return M.pause(s, id, now, where);
     });
     if (r) ui.toast(where === 'end'
-      ? q(r.title) + ' is back at the end of the queue.'
+      ? 'Paused ' + q(r.title) + '; it is back at the end of the queue.'
       : 'Paused ' + q(r.title) + '; it is up next.', { undo: true });
+  }
+
+  function swapTask(id) {
+    var r = commit('Swap with up next', function (s, now) { return M.swapWithNext(s, id, now); });
+    if (r) ui.toast('Paused ' + q(r.paused.title) + ' and started ' + q(r.started.title) + '.', { undo: true });
+  }
+
+  /* Which running task is in the foreground is a pointer, not history: it
+     is saved, but it is not an undo step and no stretch changes. */
+  function bringForward(id) {
+    S.quiet(function (s) { return M.setForeground(s, id); });
   }
 
   function clearDone() {
@@ -5320,20 +5387,33 @@ QDF.app = (function () {
     if (n) ui.toast('Cleared ' + U.plural(n, 'finished task') + ' from the timeline.', { undo: true });
   }
 
-  function nowMenu(anchorEl) {
-    var s = S.get(), c = s.current, next = M.upNext(s);
-    if (!c) return;
-    ui.menu(anchorEl, [
-      { label: 'Show in inspector', icon: 'info', onSelect: function () { select(c.id); } },
+  function taskMenu(anchorEl, id) {
+    var s = S.get(), loc = M.find(s, id), next = M.upNext(s);
+    if (!loc || loc.list !== 'active') return;
+    var isFg = M.foreground(s) === loc.item;
+    var items = [
+      { label: 'Show in inspector', icon: 'info', onSelect: function () { select(id); } },
+      'separator'
+    ];
+    if (!isFg) items.push({ label: 'Bring to the foreground', icon: 'target', onSelect: function () { bringForward(id); } });
+    items.push(
+      { label: 'Done', icon: 'check', onSelect: function () { finishTask(id); } },
+      { label: next ? 'Pause it and start up next' : 'Pause it and start up next (queue is empty)', icon: 'swap', disabled: !next,
+        onSelect: function () { swapTask(id); } },
+      { label: 'Pause, keep it up next', icon: 'pause', onSelect: function () { pauseTask(id, 'front'); } },
+      { label: 'Pause, back to the end of the queue', icon: 'queueEnd', onSelect: function () { pauseTask(id, 'end'); } },
       'separator',
-      { label: next ? 'Swap with up next' : 'Swap with up next (queue is empty)', icon: 'swap', disabled: !next,
-        onSelect: function () { startTask(next.id); } },
-      { label: 'Pause, keep it up next', icon: 'pause', onSelect: function () { pauseCurrent('front'); } },
-      { label: 'Back to the end of the queue', icon: 'queueEnd', onSelect: function () { pauseCurrent('end'); } },
-      { label: 'Done, start nothing', icon: 'check', onSelect: function () { finishTask(c.id); } },
-      'separator',
-      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(c.id); } }
-    ]);
+      { label: 'Remove task', icon: 'trash', danger: true, onSelect: function () { removeTask(id); } }
+    );
+    ui.menu(anchorEl, items);
+  }
+
+  function applyTimers() {
+    var on = !!P.get('timers'), btn = $('btn-timers');
+    if (!btn) return;
+    /* The button is "Hide timers", pressed in while they are hidden. */
+    btn.setAttribute('aria-pressed', String(!on));
+    btn.title = on ? 'Hide timers (T)' : 'Show timers (T)';
   }
 
   function resetAll() {
@@ -5342,33 +5422,29 @@ QDF.app = (function () {
     P.reset();
     selectedId = null;
     applyDrawers();
+    applyTimers();
     jumpPending = true;
     render();
     ui.toast('Reset. Everything ' + QDF.APP.name + ' kept in this browser has been deleted.', { timeout: 6000 });
   }
 
+  function foregroundId() {
+    var fg = M.foreground(S.get());
+    return fg ? fg.id : null;
+  }
+
   var ACTIONS = {
-    'done-next': function () {
-      var r = commit('Finish task', function (s, now) { return M.finishAndNext(s, now); });
-      if (r) ui.toast('Done: ' + q(r.done.title) + (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
-    },
-    'to-background': function () {
-      var r = commit('Send to background', function (s, now) { return M.toBackground(s, now); });
-      if (r) ui.toast(q(r.sent.title) + ' is running in the background' +
-        (r.next ? '. Now on ' + q(r.next.title) + '.' : '.'), { undo: true });
-    },
+    'done-next': function (el, id) { finishAndNext(id || foregroundId()); },
+    'start-next': function () { startNext(); },
     'start': function (el, id) { startTask(id); },
     'finish': function (el, id) { finishTask(id); },
+    'foreground': function (el, id) { bringForward(id); },
     'remove': function (el, id) { removeTask(id); },
     'make-next': function (el, id) {
       commit('Reorder queue', function (s) { return M.makeNext(s, id); });
     },
-    'pause-front': function () { pauseCurrent('front'); },
-    'pause-end': function () { pauseCurrent('end'); },
-    'bg-to-queue': function (el, id) {
-      var r = commit('Move to queue', function (s, now) { return M.backgroundToQueue(s, id, now); });
-      if (r) ui.toast(q(r.title) + ' is up next.', { undo: true });
-    },
+    'pause-front': function (el, id) { pauseTask(id, 'front'); },
+    'pause-end': function (el, id) { pauseTask(id, 'end'); },
     'restore': function (el, id) {
       var r = commit('Restore task', function (s) { return M.restore(s, id); });
       if (r) ui.toast(q(r.title) + ' is back in the queue.', { undo: true });
@@ -5381,8 +5457,9 @@ QDF.app = (function () {
         setTimeout(function () { var c = $('idle-chip'); if (c) c.classList.remove('is-pulsing'); }, 600);
       }
     },
-    'now-menu': function (el) { nowMenu(el); },
+    'task-menu': function (el, id) { taskMenu(el, id); },
     'undo': function () { undo(); },
+    'toggle-timers': function () { P.set('timers', !P.get('timers')); },
     'toggle-overview': function () { P.set('overview', !P.get('overview')); },
     'toggle-inspector': function () { P.set('inspector', !P.get('inspector')); },
     'jump-now': function () { jumpNow(true); },
@@ -5422,7 +5499,7 @@ QDF.app = (function () {
     if (!form) return;
     e.preventDefault();
     var kind = form.getAttribute('data-form');
-    if (kind === 'add') addFromInput(false);
+    if (kind === 'add') addFromInput('end');
     else if (kind === 'quick-start') quickStart(form);
   }
 
@@ -5445,7 +5522,7 @@ QDF.app = (function () {
     var t = e.target;
     if (t.id === 'add-input' && e.key === 'Enter' && !e.isComposing) {
       e.preventDefault();
-      addFromInput(e.shiftKey);
+      addFromInput(e.ctrlKey || e.metaKey ? 'start' : e.shiftKey ? 'next' : 'end');
       return true;
     }
     if (t.getAttribute && t.getAttribute('data-edit')) {
@@ -5612,6 +5689,7 @@ QDF.app = (function () {
     });
 
     P.onChange(function (key) {
+      if (key === 'timers' || key === 'reset') { applyTimers(); tick(); }
       if (key === 'overview' || key === 'inspector' || key === 'reset') {
         applyDrawers();
         /* The timeline column changes width as a drawer slides; check the
@@ -5625,9 +5703,10 @@ QDF.app = (function () {
     S.load();
     $('brand-mark').innerHTML = V.brandMark('bm-bar');
     Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function (el) {
-      el.outerHTML = QDF.icon(el.getAttribute('data-icon'));
+      el.outerHTML = QDF.icon(el.getAttribute('data-icon'), el.className);
     });
     applyDrawers();
+    applyTimers();
     bind();
     render();
     var notice = S.takeNotice();

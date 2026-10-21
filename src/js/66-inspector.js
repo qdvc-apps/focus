@@ -16,10 +16,10 @@ QDF.view.inspector = function (s, now, id) {
 
   var item = loc.item, eid = U.esc(item.id);
   var open = M.openStretch(item);
+  var isFg = loc.list === 'active' && M.foreground(s) === item;
   var status = {
-    current: 'In focus',
+    active: isFg ? 'In the foreground' : 'Running alongside',
     queue: loc.index === 0 ? 'Up next' : 'Queued, ' + ordinal(loc.index + 1),
-    background: 'In background',
     done: 'Done'
   }[loc.list];
 
@@ -34,33 +34,28 @@ QDF.view.inspector = function (s, now, id) {
   }
 
   /* -------------------------------------------------------------- facts */
-  var focusBanked = 0, bgBanked = 0;
-  item.stretches.forEach(function (st) {
-    if (!st.to) return;
-    if (st.kind === 'focus') focusBanked += M.duration(st, now); else bgBanked += M.duration(st, now);
-  });
+  var banked = M.total(item, now) - M.live(item, now);
   var first = M.started(item);
   var facts = '<dt>Added</dt><dd>' + when(item.created) + '</dd>';
   if (first) {
     facts += '<dt>First started</dt><dd>' + when(first) + '</dd>';
     facts += item.finished
       ? '<dt>Finished</dt><dd>' + when(item.finished) + '</dd><dt>Start to finish</dt><dd>' + U.esc(U.duration(M.span(item))) + '</dd>'
-      : '<dt>Since first start</dt><dd>' + T('dur', first, 0, now) + '</dd>';
-    facts += '<dt>Focused in all</dt><dd>' + (open && open.kind === 'focus' ? T('dur', open.from, focusBanked, now) : U.esc(U.duration(focusBanked))) + '</dd>';
-    if (bgBanked || (open && open.kind === 'background')) {
-      facts += '<dt>In background</dt><dd>' + (open && open.kind === 'background' ? T('dur', open.from, bgBanked, now) : U.esc(U.duration(bgBanked))) + '</dd>';
-    }
+      : '<dt class="timer">Since first start</dt><dd class="timer">' + T('dur', first, 0, now) + '</dd>';
+    facts += open
+      ? '<dt class="timer">Running in all</dt><dd class="timer">' + T('dur', open.from, banked, now) + '</dd>'
+      : '<dt>Running in all</dt><dd>' + U.esc(U.duration(banked)) + '</dd>';
+    facts += '<dt>Stretches</dt><dd>' + item.stretches.length + '</dd>';
   } else {
     facts += '<dt>Started</dt><dd class="dim">Not yet</dd>';
   }
 
-  /* ---------------------------------------------------------- stretches */
+  /* ------------------------------------------------------------ history */
   var stretches = item.stretches.map(function (st) {
     return '<li>' +
-      '<span class="sw ' + (st.kind === 'focus' ? 'lc0' : 'sw-bg lc1') + '" title="' + (st.kind === 'focus' ? 'In focus' : 'In the background') + '"></span>' +
-      '<span class="stretch-when">' + when(st.from) + '–' + (st.to ? U.esc(U.timeOfDay(st.to)) : 'now') +
-        (st.kind === 'focus' ? '' : ' <span class="dim">background</span>') + '</span>' +
-      '<span class="stretch-len">' + (st.to ? U.esc(U.duration(M.duration(st, now))) : T('durp', st.from, 0, now)) + '</span>' +
+      '<span class="sw lc0" aria-hidden="true"></span>' +
+      '<span class="stretch-when">' + when(st.from) + '–' + (st.to ? U.esc(U.timeOfDay(st.to)) : 'now') + '</span>' +
+      '<span class="stretch-len">' + (st.to ? U.esc(U.duration(M.duration(st, now))) : '<span class="timer">' + T('durp', st.from, 0, now) + '</span>') + '</span>' +
     '</li>';
   }).join('');
 
@@ -69,20 +64,18 @@ QDF.view.inspector = function (s, now, id) {
     return '<button type="button" class="btn btn-sm btn-block' + (cls ? ' ' + cls : '') + '" data-act="' + name + '" data-id="' + eid + '">' +
       I(icon) + '<span>' + label + '</span></button>';
   }
+  var next = M.upNext(s);
   var actions = {
-    current:
-      act('done-next', 'check', M.upNext(s) ? 'Done, start next' : 'Done', 'btn-go') +
-      act('to-background', 'background', 'Send to background') +
+    active:
+      (isFg ? '' : act('foreground', 'target', 'Bring to the foreground', 'btn-primary')) +
+      (isFg && next ? act('done-next', 'check', 'Done, start next', 'btn-go') : '') +
+      act('finish', 'check', 'Done', isFg && next ? '' : 'btn-go') +
+      (isFg && next ? act('start-next', 'parallel', 'Start up next alongside') : '') +
       act('pause-front', 'pause', 'Pause, keep it up next') +
-      act('pause-end', 'queueEnd', 'Back to the end of the queue') +
-      act('finish', 'check', 'Done, start nothing'),
+      act('pause-end', 'queueEnd', 'Pause, back to the end of the queue'),
     queue:
-      act('start', 'play', 'Start now', 'btn-go') +
+      act('start', 'play', 'Start now, alongside anything running', 'btn-go') +
       (loc.index ? act('make-next', 'up', 'Do this next') : ''),
-    background:
-      act('start', 'forward', 'Bring forward', 'btn-primary') +
-      act('finish', 'check', 'Done', 'btn-go') +
-      act('bg-to-queue', 'up', 'Back to the queue as up next'),
     done:
       act('restore', 'restore', 'Back to the queue')
   }[loc.list] + act('remove', 'trash', loc.list === 'done' ? 'Remove from history' : 'Remove task');

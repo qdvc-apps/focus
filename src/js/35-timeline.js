@@ -1,48 +1,45 @@
 /* ==========================================================================
    35-timeline.js — lays the state out as a timeline, past at the top and
-   future at the bottom, the way a Git graph lays out commits.
+   the present at the bottom, the way a Git graph lays out branches.
 
-   Lane 0 is the main line: whatever was in focus. A background stretch
-   forks off into its own lane (1, 2, …) at the moment it starts and merges
-   back when it ends — into the task's next focus stretch if it was brought
-   forward, or through an end marker if it finished or went back to the
-   queue. Background work still running carries its lane down to the "now"
-   row, where it ends.
+   Every stretch of every task becomes a card. Cards sit in lanes (columns):
+   a stretch takes the lowest lane free when it starts and keeps it until it
+   ends. A card spans every row from its start to its end, so tasks that ran
+   at the same time sit side by side. With one task at a time, everything
+   stays in lane 0 and reads as a single line.
 
-   build(state, now) → { rows, lanes, now }. Each row has a `type`:
+   Rows are the moments something changed:
+     day     a date heading
+     start   a stretch began (the card starts here)
+     tick    a stretch ended and nothing else happened at that moment
+     gap     a minute or more with nothing running began here
+     now     the present: running stretches end here
 
-     day        a date heading
-     focus      a past focus stretch (lane 0); `outcome` is how it ended:
-                'done', 'background' or 'paused'
-     gap        a stretch of nothing in focus (lane 0, dashed)
-     bg         a background stretch starting (its own lane, forks from 0)
-     bgEnd      a background stretch ending other than by being brought
-                forward; `outcome` is 'done', 'queued' or 'ended'
-     present    the task in focus now
-     now        the present moment
-     future     a queued task; index 0 is up next
-     add        the "add a task" row at the very end
+   build(state, now) → { rows, segs, lanes, nowRow, cardW }
 
-   and the graph information the view needs:
+   Each seg (stretch) has: item, where, stretch, from, to, open, sec,
+   outcome ('done' | 'paused' | 'running'), lane, startRow, endRow (the row
+   whose top it ends at, exclusive), height (card min-height, or null).
 
-     lane       which lane the row's node sits on
-     lanesIn    background lanes arriving from above
-     lanesOut   background lanes continuing below
-     mergeLane  a background lane that ends in this row's node (focus/present)
-     endLanes   background lanes that end at this row (now)
-     main       { in, out, through } styles of lane 0: 'solid' (focused),
-                'idle' (nothing in focus), 'future', or null (no line)
-     height     the row's minimum height in pixels, or null for "fit"
+   Each row has: type, t, and for the graph column
+     lanesIn   lanes running into the row from above
+     ending    lanes that end at the top of this row
+     through   lanes that run straight through
+     lane      the lane of this row's node (start rows)
+     merges    [{ from, to }] lanes that end here and join another lane
+     caps      lanes that end at this row's node (running work, at now)
+     fork      the lane a new branch leaves from, or null
+     idleIn, idleOut   whether lane 0 shows the dashed "nothing running"
+                       line above / below the node line
+     height    the row's minimum height
 
    Pure: no DOM, no clock of its own. tools/test-timeline.mjs covers it.
    ========================================================================== */
 
 QDF.timeline = (function () {
   var U = QDF.util, M = QDF.model, G = QDF.GEOM;
-
-  /* At the same instant, endings come before starts, and a background
-     stretch starting (the fork) before the next focus stretch. */
-  var ORDER = { bgEnd: 0, bg: 1, gap: 2, focus: 3 };
+  var ORDER = { tick: 0, gap: 1, start: 2 };
+  var ROW_MIN = { day: 42, start: 36, tick: 10, gap: 30, now: 48 };
 
   /* Height hints duration: logarithmic, so five minutes and five hours both
      fit on screen, but a long stretch visibly takes more room. */
@@ -52,173 +49,145 @@ QDF.timeline = (function () {
   }
 
   function collect(s, now) {
-    var events = [], segs = [];
-    var groups = [
-      ['done', s.done],
-      ['current', s.current ? [s.current] : []],
-      ['background', s.background],
-      ['queue', s.queue]
-    ];
-    groups.forEach(function (g) {
-      var where = g[0];
+    var segs = [];
+    [['done', s.done], ['active', s.active], ['queue', s.queue]].forEach(function (g) {
       g[1].forEach(function (item) {
-        var st = item.stretches, lastIndex = st.length - 1;
-        st.forEach(function (x, k) {
-          var from = U.ms(x.from), to = x.to ? U.ms(x.to) : null;
-          var key = item.id + '#' + k;
-          var prev = st[k - 1], next = st[k + 1];
-          if (x.kind === 'focus') {
-            segs.push({ from: from, to: to === null ? now : to });
-            if (!x.to) return;  /* the open focus stretch is the present row */
-            events.push({
-              type: 'focus', t: from, key: key, item: item, where: where, stretch: x, index: k,
-              sec: M.duration(x, now),
-              outcome: item.finished && k === lastIndex ? 'done'
-                : next && next.kind === 'background' && next.from === x.to ? 'background' : 'paused',
-              mergeKey: prev && prev.kind === 'background' && prev.to === x.from ? item.id + '#' + (k - 1) : null
-            });
-          } else {
-            events.push({
-              type: 'bg', t: from, key: key, item: item, where: where, stretch: x, index: k,
-              open: !x.to, sec: M.duration(x, now)
-            });
-            if (x.to && !(next && next.kind === 'focus' && next.from === x.to)) {
-              events.push({
-                type: 'bgEnd', t: to, key: key, item: item, where: where, stretch: x, index: k,
-                outcome: next ? 'queued'
-                  : item.finished ? 'done'
-                  : where === 'queue' ? 'queued' : 'ended'
-              });
-            }
-          }
+        var last = item.stretches.length - 1;
+        item.stretches.forEach(function (st, k) {
+          var to = st.to ? U.ms(st.to) : null;
+          segs.push({
+            key: item.id + '#' + k, item: item, where: g[0], stretch: st, index: k,
+            from: U.ms(st.from), to: to, open: to === null, sec: M.duration(st, now),
+            outcome: to === null ? 'running' : item.finished && k === last ? 'done' : 'paused'
+          });
         });
       });
     });
-
-    segs.sort(function (a, b) { return a.from - b.from; });
-    for (var n = 0; n + 1 < segs.length; n++) {
-      var gap = (segs[n + 1].from - segs[n].to) / 1000;
-      if (gap >= G.gapMin) events.push({ type: 'gap', t: segs[n].to, sec: Math.floor(gap), key: 'gap#' + n });
-    }
-
-    events.sort(function (a, b) {
-      if (a.t !== b.t) return a.t - b.t;
-      if (a.key === b.key) return a.type === 'bg' ? -1 : 1;
-      return ORDER[a.type] - ORDER[b.type];
-    });
-    return { events: events, segs: segs };
+    segs.sort(function (a, b) { return a.from - b.from || (a.key < b.key ? -1 : 1); });
+    return segs;
   }
 
   function build(s, now) {
-    var c = collect(s, now);
-    var segs = c.segs;
+    var segs = collect(s, now);
 
-    function activeAt(t) {
-      for (var k = 0; k < segs.length; k++) {
-        if (segs[k].from <= t && t < segs[k].to) return true;
-      }
-      return false;
-    }
+    /* ------------------------------------------------ the moments */
+    var points = [], starts = {}, ends = {};
+    segs.forEach(function (sg) {
+      points.push({ type: 'start', t: sg.from, seg: sg });
+      starts[sg.from] = true;
+      if (!sg.open) ends[sg.to] = true;
+    });
 
-    /* ---------------------------------------------------- row sequence */
+    /* Holes in the union of all stretches: nothing was running. */
+    var cover = segs.map(function (sg) { return [sg.from, sg.open ? now : sg.to]; });
+    var gaps = {}, reach = null;
+    cover.forEach(function (c) {
+      if (reach !== null && c[0] - reach >= G.gapMin * 1000) gaps[reach] = Math.floor((c[0] - reach) / 1000);
+      reach = reach === null ? c[1] : Math.max(reach, c[1]);
+    });
+
+    Object.keys(ends).forEach(function (k) {
+      var t = Number(k);
+      if (gaps[t] !== undefined) points.push({ type: 'gap', t: t, sec: gaps[t] });
+      else if (!starts[t]) points.push({ type: 'tick', t: t });
+    });
+    points.sort(function (a, b) { return a.t - b.t || ORDER[a.type] - ORDER[b.type]; });
+
+    /* ------------------------------------------------------- rows */
     var rows = [], lastDay = null;
     function dayBreak(t) {
       var d = U.dayKey(U.iso(t));
-      if (d !== lastDay) { rows.push({ type: 'day', t: t, day: d, key: 'day#' + d }); lastDay = d; }
+      if (d !== lastDay) { rows.push({ type: 'day', t: t, day: d }); lastDay = d; }
     }
-    c.events.forEach(function (e) { dayBreak(e.t); rows.push(e); });
-
+    points.forEach(function (p) {
+      dayBreak(p.t);
+      if (p.type === 'start') p.seg.startRow = rows.length;
+      rows.push(p);
+    });
     dayBreak(now);
-    var lastFocusEnd = null;
-    segs.forEach(function (sg) { if (lastFocusEnd === null || sg.to > lastFocusEnd) lastFocusEnd = sg.to; });
+    var nowRow = rows.length;
+    var lastEnd = null;
+    cover.forEach(function (c) { lastEnd = lastEnd === null ? c[1] : Math.max(lastEnd, c[1]); });
+    rows.push({ type: 'now', t: now, idleSince: !s.active.length && lastEnd !== null ? U.iso(lastEnd) : null });
 
-    if (s.current) {
-      var cur = s.current, k = cur.stretches.length - 1, open = cur.stretches[k], prev = cur.stretches[k - 1];
-      rows.push({
-        type: 'present', t: U.ms(open.from), key: 'present', item: cur, stretch: open, index: k,
-        mergeKey: prev && prev.kind === 'background' && prev.to === open.from ? cur.id + '#' + (k - 1) : null
-      });
-    }
-    rows.push({
-      type: 'now', t: now, key: 'now',
-      idleSince: !s.current && lastFocusEnd !== null ? U.iso(lastFocusEnd) : null
-    });
-    s.queue.forEach(function (item, i) {
-      rows.push({ type: 'future', key: 'future#' + item.id, item: item, index: i });
-    });
-    rows.push({ type: 'add', key: 'add' });
-
-    /* ----------------------------------------------------------- lanes */
-    var lanes = [], laneOf = {}, maxLane = 0, began = false, prevOut = null;
-
-    function active() {
-      var out = [];
-      for (var L = 1; L < lanes.length; L++) if (lanes[L]) out.push(L);
-      return out;
-    }
-
-    rows.forEach(function (r) {
-      r.lanesIn = active();
-      r.lane = 0;
-
-      if (r.type === 'bg') {
-        var L = 1;
-        while (lanes[L]) L++;
-        lanes[L] = r.key;
-        laneOf[r.key] = L;
-        r.lane = L;
-        if (L > maxLane) maxLane = L;
-      } else if (r.type === 'bgEnd') {
-        r.lane = laneOf[r.key] || 0;
-        if (r.lane) lanes[r.lane] = null;
-      } else if ((r.type === 'focus' || r.type === 'present') && r.mergeKey && laneOf[r.mergeKey] &&
-                 lanes[laneOf[r.mergeKey]] === r.mergeKey) {
-        r.mergeLane = laneOf[r.mergeKey];
-        lanes[r.mergeLane] = null;
-      } else if (r.type === 'now') {
-        r.endLanes = r.lanesIn;
-        lanes = [];
+    /* Where each stretch ends: the first row after its start at or after
+       its end time; running stretches end at now. */
+    segs.forEach(function (sg) {
+      if (sg.open) { sg.endRow = nowRow; return; }
+      for (var r = sg.startRow + 1; r <= nowRow; r++) {
+        if (rows[r].type !== 'day' && rows[r].t >= sg.to) { sg.endRow = r; return; }
       }
-      r.lanesOut = active();
-
-      /* lane 0 */
-      switch (r.type) {
-        case 'focus':
-        case 'present':
-          r.main = { in: began ? prevOut : null, out: 'solid' };
-          began = true;
-          break;
-        case 'gap':
-          r.main = { in: 'idle', out: 'idle', through: true };
-          break;
-        case 'now':
-          r.main = { in: began ? (s.current ? 'solid' : 'idle') : null, out: 'future' };
-          began = true;
-          break;
-        case 'future':
-          r.main = { in: 'future', out: 'future' };
-          break;
-        case 'add':
-          r.main = { in: 'future', out: null };
-          break;
-        default:
-          if (!began) { r.main = null; break; }
-          var style = activeAt(r.t) ? 'solid' : 'idle';
-          r.main = { in: style, out: style, through: true };
-      }
-      if (r.main) prevOut = r.main.out;
-
-      r.height =
-        r.type === 'focus' ? heightFor(r.sec) :
-        r.type === 'bg' ? (r.open ? 70 : 48) :
-        r.type === 'bgEnd' ? 44 :
-        r.type === 'gap' ? 32 :
-        r.type === 'day' ? 44 :
-        r.type === 'future' ? (r.index === 0 ? 58 : 48) :
-        null;
+      sg.endRow = nowRow;
     });
 
-    return { rows: rows, lanes: maxLane + 1, now: now };
+    /* ------------------------------------------------------ lanes */
+    var laneSeg = [], maxLane = 0, began = false;
+    var fg = M.foreground(s);
+
+    rows.forEach(function (r, i) {
+      var inLanes = [], ending = [], through = [];
+      for (var L = 0; L < laneSeg.length; L++) {
+        var sg = laneSeg[L];
+        if (!sg) continue;
+        inLanes.push(L);
+        if (sg.endRow === i) ending.push(L); else through.push(L);
+      }
+      ending.forEach(function (L) { r.endingSegs = (r.endingSegs || []).concat([laneSeg[L]]); laneSeg[L] = null; });
+
+      r.lanesIn = inLanes;
+      r.ending = ending;
+      r.through = through;
+      r.merges = [];
+      r.caps = [];
+      r.fork = null;
+      r.idleIn = began && !inLanes.length;
+
+      if (r.type === 'start') {
+        var lane = 0;
+        while (laneSeg[lane]) lane++;
+        laneSeg[lane] = r.seg;
+        r.seg.lane = lane;
+        r.lane = lane;
+        if (lane > maxLane) maxLane = lane;
+        if (ending.indexOf(lane) === -1 && through.length) r.fork = through[0];
+        r.foreground = r.seg.open && fg && r.seg.item.id === fg.id;
+        began = true;
+      }
+
+      if (r.type === 'now') {
+        r.endingSegs = r.endingSegs || [];
+        var running = r.endingSegs.filter(function (x) { return x.open; }).map(function (x) { return x.lane; });
+        r.caps = running;
+        ending.forEach(function (L) {
+          if (running.indexOf(L) === -1) r.merges.push({ from: L, to: running.length ? running[0] : 0 });
+        });
+      } else {
+        ending.forEach(function (L) {
+          if (r.type === 'start' && L === r.lane) return;   /* the same lane carries straight on */
+          var to = through.length ? through[0] : r.type === 'start' ? r.lane : 0;
+          if (to !== L || r.type !== 'start') r.merges.push({ from: L, to: to });
+        });
+      }
+
+      var out = through.slice();
+      if (r.type === 'start') out.push(r.lane);
+      r.lanesOut = r.type === 'now' ? [] : out.sort(function (a, b) { return a - b; });
+      r.idleOut = began && !r.lanesOut.length && r.type !== 'now';
+      r.height = ROW_MIN[r.type];
+    });
+
+    /* ------------------------------------------------ card sizes */
+    segs.forEach(function (sg) { sg.height = sg.open ? null : heightFor(sg.sec); });
+    var lanes = maxLane + 1;
+
+    return {
+      rows: rows,
+      segs: segs,
+      lanes: lanes,
+      nowRow: nowRow,
+      cardW: G.cardW[Math.min(lanes, G.cardW.length) - 1],
+      future: s.queue
+    };
   }
 
   return { build: build, heightFor: heightFor };

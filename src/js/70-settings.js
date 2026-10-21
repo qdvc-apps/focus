@@ -11,6 +11,8 @@ QDF.settings = (function () {
     ['.', 'Jump to now'],
     ['N', 'Add a task to the queue'],
     ['Shift + Enter', 'In the add box: add as up next'],
+    ['Ctrl + Enter', 'In the add box: start it now'],
+    ['T', 'Show or hide timers'],
     ['[', 'Open or close the overview'],
     [']', 'Open or close the inspector'],
     ['Ctrl + Z', 'Undo the last change (⌘ Z on a Mac)'],
@@ -86,8 +88,9 @@ QDF.settings = (function () {
       '<div class="about-head"><div class="about-mark" aria-hidden="true">' + QDF.view.brandMark('bm-about') + '</div>' +
         '<div><div class="about-name">' + U.esc(QDF.APP.name) + '</div>' +
         '<div class="dim">Version ' + U.esc(QDF.APP.version) + ' · format ' + U.esc(QDF.APP.format) + '</div></div></div>' +
-      '<p>A timeline of your attention: what you worked on, what you are on now, and what could come next. ' +
-        'Work handed to a machine branches off the main line and merges back when you return to it.</p>' +
+      '<p>A timeline of your work: what you did, what is running now, and what could come next. ' +
+        'Tasks can run in parallel; they branch off side by side and join back up when they end. ' +
+        'Pick one to keep in the foreground — the history only records that they ran.</p>' +
       '<p>Everything stays in this browser. Export the YAML to keep a copy, and import it to resume.</p>' +
       '<table class="keys"><tbody>' + KEYS.map(function (k) {
         return '<tr><td>' + k[0].split(' + ').map(function (p) { return '<kbd>' + U.esc(p) + '</kbd>'; }).join(' + ') +

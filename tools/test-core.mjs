@@ -14,7 +14,7 @@ function fresh() {
 }
 
 function titles(list) { return list.map(x => x.title); }
-function kinds(item) { return item.stretches.map(st => st.kind[0] + (st.to ? '' : '…')).join(' '); }
+const byTitle = (s, n) => [...s.active, ...s.queue, ...s.done].find(x => x.title === n);
 
 /* --------------------------------------------------------------- model */
 
@@ -35,94 +35,79 @@ t.check('titles are tidied and notes keep their lines', () => {
   t.eq(item.notes, 'line 1\nline 2');
 });
 
-t.check('start opens a focus stretch; the previous task closes its own and becomes up next', () => {
+t.check('starting runs tasks in parallel; nothing else stops', () => {
   const { M, s } = fresh();
-  const a = M.add(s, 'a', '', null, T0), b = M.add(s, 'b', '', null, T0);
-  M.add(s, 'c', '', null, T0);
-  M.start(s, a.id, T0);
-  t.eq(s.current.stretches, [{ kind: 'focus', from: iso(T0), to: null }]);
-  const r = M.start(s, b.id, T0 + 10 * MIN);
-  t.eq(r.previous.title, 'a');
-  t.eq(titles(s.queue), ['a', 'c']);
-  t.eq(s.queue[0].stretches, [{ kind: 'focus', from: iso(T0), to: iso(T0 + 10 * MIN) }]);
-  t.eq(M.focusTotal(s.queue[0], T0 + 99 * MIN), 600);
-  t.eq(M.start(s, b.id, T0), null, 'starting the current task is a no-op');
+  ['a', 'b', 'c'].forEach(n => M.add(s, n, '', null, T0));
+  M.start(s, byTitle(s, 'a').id, T0);
+  M.start(s, byTitle(s, 'b').id, T0 + 10 * MIN);
+  t.eq(titles(s.active), ['a', 'b']);
+  t.eq(byTitle(s, 'a').stretches, [{ from: iso(T0), to: null }], 'a is still running');
+  t.eq(s.foreground, byTitle(s, 'b').id, 'the newly started task comes to the foreground');
+  t.eq(M.start(s, byTitle(s, 'b').id, T0), null, 'starting a running task is a no-op');
+  t.eq(titles(s.queue), ['c']);
 });
 
-t.check('finishAndNext logs the task and starts up next', () => {
+t.check('the foreground is a pointer: switching it changes no history', () => {
   const { M, s } = fresh();
-  const a = M.add(s, 'a', '', null, T0);
-  M.add(s, 'b', '', null, T0);
-  M.start(s, a.id, T0);
-  const r = M.finishAndNext(s, T0 + 25 * MIN);
-  t.eq(r.done.title, 'a');
-  t.eq(r.next.title, 'b');
+  ['a', 'b'].forEach(n => M.add(s, n, '', null, T0));
+  M.start(s, s.queue[0].id, T0);
+  M.start(s, s.queue[0].id, T0 + MIN);
+  const before = JSON.stringify(s.active);
+  t.ok(M.setForeground(s, byTitle(s, 'a').id));
+  t.eq(s.foreground, byTitle(s, 'a').id);
+  t.eq(JSON.stringify(s.active), before, 'stretches and order untouched');
+  t.eq(M.setForeground(s, byTitle(s, 'a').id), null, 'already in the foreground');
+  M.add(s, 'q', '', null, T0);
+  t.eq(M.setForeground(s, byTitle(s, 'q').id), null, 'only running tasks can be in the foreground');
+});
+
+t.check('when the foreground task stops, the most recently started one takes over', () => {
+  const { M, s } = fresh();
+  ['a', 'b', 'c'].forEach(n => M.add(s, n, '', null, T0));
+  ['a', 'b', 'c'].forEach((n, k) => M.start(s, byTitle(s, n).id, T0 + k * MIN));
+  M.setForeground(s, byTitle(s, 'a').id);
+  M.finish(s, byTitle(s, 'a').id, T0 + 5 * MIN);
+  t.eq(s.foreground, byTitle(s, 'c').id);
+  M.pause(s, byTitle(s, 'c').id, T0 + 6 * MIN, 'front');
+  t.eq(s.foreground, byTitle(s, 'b').id);
+  M.remove(s, byTitle(s, 'b').id);
+  t.eq(s.foreground, null, 'nothing running, nothing in the foreground');
+});
+
+t.check('finishAndNext logs the task and starts up next alongside the rest', () => {
+  const { M, s } = fresh();
+  ['a', 'b', 'c'].forEach(n => M.add(s, n, '', null, T0));
+  M.start(s, byTitle(s, 'a').id, T0);
+  M.start(s, byTitle(s, 'b').id, T0);
+  const r = M.finishAndNext(s, byTitle(s, 'b').id, T0 + 25 * MIN);
+  t.eq(r.done.title, 'b');
+  t.eq(r.next.title, 'c');
+  t.eq(titles(s.active), ['a', 'c']);
   t.eq(s.done[0].finished, iso(T0 + 25 * MIN));
   t.eq(M.span(s.done[0]), 1500);
   t.eq(M.openStretch(s.done[0]), null);
-  M.finishAndNext(s, T0 + 30 * MIN);
-  t.eq(s.current, null, 'nothing left to start');
-  t.eq(M.finishAndNext(s, T0), null, 'no current task is a no-op');
+  t.eq(M.finishAndNext(s, 'nope', T0), null);
 });
 
-t.check('background: send, time, bring forward, finish', () => {
-  const { M, s } = fresh();
-  const build = M.add(s, 'build', '', null, T0);
-  M.add(s, 'email', '', null, T0);
-  M.start(s, build.id, T0);
-  const r = M.toBackground(s, T0 + 5 * MIN);
-  t.eq(r.sent.title, 'build');
-  t.eq(r.next.title, 'email');
-  t.eq(kinds(s.background[0]), 'f b…');
-  t.eq(M.live(s.background[0], T0 + 20 * MIN), 900);
-  M.start(s, build.id, T0 + 20 * MIN);
-  t.eq(kinds(s.current), 'f b f…');
-  t.eq(s.current.stretches[1].to, s.current.stretches[2].from, 'brought forward at the moment the background stretch ended');
-  t.eq(titles(s.queue), ['email']);
-  M.toBackground(s, T0 + 22 * MIN);
-  t.eq(s.current.title, 'email');
-  const done = M.finish(s, build.id, T0 + 30 * MIN);
-  t.eq(M.backgroundTotal(done, T0 + 99 * MIN), 900 + 480);
-  t.eq(M.focusTotal(done, T0 + 99 * MIN), 300 + 120);
-  t.eq(s.current.title, 'email', 'finishing a background task leaves focus alone');
-});
-
-t.check('several tasks can run in the background at once', () => {
-  const { M, s } = fresh();
-  ['x', 'y', 'z'].forEach(n => M.add(s, n, '', null, T0));
-  M.start(s, s.queue[0].id, T0);
-  M.toBackground(s, T0 + MIN);
-  M.toBackground(s, T0 + 2 * MIN);
-  M.toBackground(s, T0 + 3 * MIN);
-  t.eq(titles(s.background), ['x', 'y', 'z']);
-  t.eq(s.current, null, 'an empty queue leaves nothing in focus');
-});
-
-t.check('pause, swap and backgroundToQueue', () => {
+t.check('pause and swap', () => {
   const { M, s } = fresh();
   ['a', 'b', 'c'].forEach(n => M.add(s, n, '', null, T0));
-  M.start(s, s.queue[0].id, T0);
-  M.swapWithNext(s, T0 + MIN);
-  t.eq(s.current.title, 'b');
-  t.eq(titles(s.queue), ['a', 'c']);
-  M.pause(s, T0 + 2 * MIN, 'end');
-  t.eq(s.current, null);
+  M.start(s, byTitle(s, 'a').id, T0);
+  const r = M.swapWithNext(s, byTitle(s, 'a').id, T0 + MIN);
+  t.eq(r.paused.title, 'a');
+  t.eq(r.started.title, 'b');
+  t.eq(titles(s.active), ['b']);
+  t.eq(titles(s.queue), ['a', 'c'], 'the paused task is up next');
+  M.pause(s, byTitle(s, 'b').id, T0 + 2 * MIN, 'end');
   t.eq(titles(s.queue), ['a', 'c', 'b']);
-  M.start(s, s.queue[1].id, T0 + 3 * MIN);
-  M.pause(s, T0 + 4 * MIN, 'front');
-  t.eq(titles(s.queue), ['c', 'a', 'b']);
-  M.start(s, s.queue[0].id, T0 + 5 * MIN);
-  M.toBackground(s, T0 + 6 * MIN);
-  const c = s.background[0];
-  M.backgroundToQueue(s, c.id, T0 + 16 * MIN);
-  t.eq(s.queue[0].title, 'c');
-  t.eq(kinds(s.queue[0]), 'f f b');
+  t.eq(byTitle(s, 'b').stretches, [{ from: iso(T0 + MIN), to: iso(T0 + 2 * MIN) }]);
+  t.eq(M.swapWithNext(s, 'nope', T0), null);
 });
 
 t.check('move, makeNext and moveBefore', () => {
   const { M, s } = fresh();
   ['a', 'b', 'c', 'd'].forEach(n => M.add(s, n, '', null, T0));
-  const id = n => s.queue.find(x => x.title === n).id;
+  const id = n => byTitle(s, n).id;
   M.makeNext(s, id('c'));
   t.eq(titles(s.queue), ['c', 'a', 'b', 'd']);
   t.eq(M.makeNext(s, id('c')), null, 'already next');
@@ -134,42 +119,39 @@ t.check('move, makeNext and moveBefore', () => {
   t.eq(titles(s.queue), ['d', 'c', 'a', 'b'], 'before the first becomes up next');
   t.eq(M.moveBefore(s, id('c'), id('a')), null, 'already there');
   t.eq(M.moveBefore(s, id('c'), id('c')), null, 'before itself');
-  M.move(s, id('b'), 99);
-  t.eq(titles(s.queue), ['d', 'c', 'a', 'b']);
 });
 
 t.check('remove, restore, clearDone, edit', () => {
   const { M, s } = fresh();
   ['a', 'b'].forEach(n => M.add(s, n, '', null, T0));
-  M.start(s, s.queue[0].id, T0);
-  M.finishAndNext(s, T0 + MIN);
-  const a = s.done[0];
+  M.start(s, byTitle(s, 'a').id, T0);
+  M.finishAndNext(s, byTitle(s, 'a').id, T0 + MIN);
+  const a = byTitle(s, 'a');
   M.restore(s, a.id);
   t.eq(s.queue[s.queue.length - 1].title, 'a');
-  t.eq(s.queue[s.queue.length - 1].finished, undefined);
-  t.eq(s.queue[s.queue.length - 1].stretches.length, 1, 'history is kept');
+  t.eq(a.finished, undefined);
+  t.eq(a.stretches.length, 1, 'history is kept');
   t.eq(M.edit(s, a.id, { title: 'a2', notes: 'n' }).title, 'a2');
   t.eq(M.edit(s, a.id, { title: 'a2', notes: 'n' }), null, 'no change reports null');
   t.eq(M.edit(s, a.id, { title: '   ' }), null, 'a blank title keeps the old one');
-  M.remove(s, s.current.id);
-  t.eq(s.current, null);
+  M.remove(s, byTitle(s, 'b').id);
+  t.eq(s.active, []);
   M.start(s, a.id, T0 + 2 * MIN);
   M.finish(s, a.id, T0 + 3 * MIN);
   t.eq(M.clearDone(s), 1);
   t.eq(M.clearDone(s), null);
 });
 
-t.check('elapsed counts from first start, across stretches', () => {
+t.check('times: elapsed from first start, totals across stretches, the live stretch', () => {
   const { M, s } = fresh();
-  const a = M.add(s, 'a', '', null, T0);
-  M.add(s, 'b', '', null, T0);
+  ['a', 'b'].forEach(n => M.add(s, n, '', null, T0));
+  const a = byTitle(s, 'a');
   M.start(s, a.id, T0);
-  M.swapWithNext(s, T0 + 10 * MIN);
-  M.swapWithNext(s, T0 + 30 * MIN);
-  t.eq(s.current.title, 'a');
-  t.eq(M.elapsed(s.current, T0 + 40 * MIN), 2400);
-  t.eq(M.live(s.current, T0 + 40 * MIN), 600);
-  t.eq(M.focusTotal(s.current, T0 + 40 * MIN), 1200);
+  M.pause(s, a.id, T0 + 10 * MIN, 'front');
+  M.start(s, a.id, T0 + 30 * MIN);
+  t.eq(M.elapsed(a, T0 + 40 * MIN), 2400);
+  t.eq(M.live(a, T0 + 40 * MIN), 600);
+  t.eq(M.total(a, T0 + 40 * MIN), 1200);
 });
 
 /* ----------------------------------------------------------- serialise */
@@ -179,10 +161,10 @@ function busyState(QDF) {
   ['Write: notes', 'Run "build"', 'PR #12', 'true', '42', 'Café ✓'].forEach((n, k) =>
     M.add(s, n, k === 0 ? 'line 1\nline 2' : '', null, T0));
   M.start(s, s.queue[0].id, T0);
-  M.toBackground(s, T0 + 5 * MIN);
-  M.finishAndNext(s, T0 + 9 * MIN);
-  M.start(s, s.background[0].id, T0 + 12 * MIN);
-  M.toBackground(s, T0 + 14 * MIN);
+  M.start(s, s.queue[0].id, T0 + 5 * MIN);
+  M.finishAndNext(s, s.active[0].id, T0 + 9 * MIN);
+  M.pause(s, s.active[0].id, T0 + 12 * MIN, 'end');
+  M.setForeground(s, s.active[0].id);
   return s;
 }
 
@@ -193,19 +175,23 @@ t.check('export → import → export is byte-identical', () => {
   const first = QDF.serialize.toYaml(s, now);
   const back = QDF.serialize.fromYaml(first, now);
   t.eq(back.warnings, []);
-  t.eq(back.version, 2);
+  t.eq(back.state.foreground, s.foreground);
   const second = QDF.serialize.toYaml(back.state, now);
   t.ok(first === second, 'second export differs:\n' + second);
-  t.ok(/\nformat: qdvc-focus\/2\n/.test(first));
-  t.ok(/- focus: 2026-10-21T09:00:00\.000Z\/2026-10-21T09:05:00\.000Z\n/.test(first), 'closed stretch as an interval');
-  t.ok(/- background: [^\n]+\/\.\.\n/.test(first), 'open stretch ends in ..');
+  t.ok(/\nformat: qdvc-focus\/3\n/.test(first));
+  t.ok(/\n {6}- 2026-10-21T09:00:00\.000Z\/2026-10-21T09:09:00\.000Z\n/.test(first), 'closed stretch as an interval');
+  t.ok(/\n {6}- [^\n]+\/\.\.\n/.test(first), 'running stretch ends in ..');
 });
 
 t.check('import is forgiving about hand edits', () => {
   const QDF = load();
   const text = [
-    'current:',
-    '  title: Hand written',
+    'foreground: ghost',
+    'active:',
+    '  - title: Hand written',
+    '  - title: Also running',
+    '    stretches:',
+    '      - 2026-10-21T08:00:00Z/2026-10-21T08:30:00Z',
     'queue:',
     '  - just a title',
     '  - id: dup',
@@ -214,85 +200,49 @@ t.check('import is forgiving about hand edits', () => {
     '  - id: dup',
     '    title: Second',
     '    stretches:',
-    '      - focus: 2026-10-21T08:10:00Z/2026-10-21T08:00:00Z',
-    '      - focus: 2026-10-21T07:00:00Z/2026-10-21T07:30:00Z',
-    '      - kind: focus',
-    '        from: 2026-10-21T07:20:00Z',
+    '      - 2026-10-21T08:10:00Z/2026-10-21T08:00:00Z',
+    '      - 2026-10-21T07:00:00Z/2026-10-21T07:30:00Z',
+    '      - from: 2026-10-21T07:20:00Z',
     '        to: 2026-10-21T07:40:00Z',
-    '      - focus: yesterday/today',
-    '      - nap: 2026-10-21T06:00:00Z/..',
+    '      - yesterday/today',
+    '      - 42',
     '  - id: has spaces',
     '    title: "   "',
-    'background:',
-    '  - title: Waiting',
     'done:',
     '  - title: Old',
     '    stretches:',
-    '      - focus: 2026-10-21T06:00:00Z/..'
+    '      - 2026-10-21T06:00:00Z/..'
   ].join('\n');
   const now = T0;
   const r = QDF.serialize.fromYaml(text, now);
   const s = r.state;
-  t.eq(s.current.title, 'Hand written');
-  t.eq(s.current.stretches, [{ kind: 'focus', from: iso(now), to: null }], 'a current task gets a live stretch');
-  t.eq(s.queue.map(x => x.title), ['just a title', 'First', 'Second', 'Untitled task']);
+  t.eq(titles(s.active), ['Hand written', 'Also running']);
+  t.eq(s.active[0].stretches, [{ from: iso(now), to: null }], 'a running task gets a running stretch');
+  t.eq(s.active[1].stretches.length, 2, 'a closed last stretch is followed by a running one');
+  t.eq(s.foreground, s.active[1].id, 'an unknown foreground falls back to the latest started');
+  t.ok(r.warnings.some(w => /foreground/.test(w)));
+  t.eq(titles(s.queue), ['just a title', 'First', 'Second', 'Untitled task']);
   t.eq(s.queue[1].finished, undefined, 'finished dropped from a queued task');
   t.ok(s.queue[1].id !== s.queue[2].id, 'duplicate ids renamed');
   t.ok(/^[\w.:-]+$/.test(s.queue[3].id), 'unusable id replaced');
   t.eq(s.queue[2].stretches.map(x => [x.from.slice(11, 16), x.to.slice(11, 16)]),
     [['07:00', '07:20'], ['07:20', '07:40'], ['08:10', '08:10']], 'sorted, overlaps trimmed, reversed end clamped');
-  t.ok(r.warnings.some(w => /unreadable time/.test(w)), 'warned about the bad stretch');
-  t.ok(r.warnings.some(w => /not a focus or background/.test(w)), 'warned about the unknown kind');
-  t.eq(s.background[0].stretches[0].kind, 'background');
+  t.ok(r.warnings.some(w => /unreadable time/.test(w)));
+  t.ok(r.warnings.some(w => /not "start\/end"/.test(w)));
   t.eq(s.done[0].stretches[0].to, s.done[0].finished, 'a running stretch on a done task closes at finish');
   t.ok(r.warnings.some(w => /Closed a stretch/.test(w)));
 });
 
-t.check('version 1 files are converted', () => {
-  const QDF = load();
-  const text = [
-    'format: qdvc-focus/1',
-    'current:',
-    '  id: a',
-    '  title: In focus',
-    '  started: 2026-10-21T08:00:00.000Z',
-    '  focused_since: 2026-10-21T08:50:00.000Z',
-    '  focus_seconds: 1800',
-    'background:',
-    '  - id: b',
-    '    title: Building',
-    '    started: 2026-10-21T07:00:00.000Z',
-    '    background_since: 2026-10-21T07:10:00.000Z',
-    '    focus_seconds: 600',
-    'done:',
-    '  - id: c',
-    '    title: Old',
-    '    started: 2026-10-21T06:00:00.000Z',
-    '    finished: 2026-10-21T06:45:00.000Z',
-    '    focus_seconds: 900',
-    '    background_seconds: 1800'
-  ].join('\n');
-  const r = QDF.serialize.fromYaml(text, T0);
-  t.eq(r.version, 1);
-  t.ok(/Converted from format qdvc-focus\/1/.test(r.warnings[0]));
-  const s = r.state, M = QDF.model;
-  t.eq(s.current.stretches.map(x => [x.kind, x.from.slice(11, 16), x.to && x.to.slice(11, 16)]),
-    [['focus', '08:00', '08:30'], ['focus', '08:50', null]]);
-  t.eq(M.focusTotal(s.current, T0), 1800 + 600);
-  t.eq(s.background[0].stretches.map(x => x.kind + (x.to ? '' : '…')), ['focus', 'background…']);
-  t.eq(M.backgroundTotal(s.done[0], T0), 1800);
-  t.eq(s.done[0].finished, '2026-10-21T06:45:00.000Z');
-  t.ok(/qdvc-focus\/2/.test(QDF.serialize.toYaml(s, T0)), 're-exports as version 2');
-});
-
-t.check('import rejects things that are not a state', () => {
+t.check('import rejects things that are not a state, and earlier formats', () => {
   const QDF = load();
   t.throws(() => QDF.serialize.fromYaml('', T0), /nothing to import/);
   t.throws(() => QDF.serialize.fromYaml('- a\n- b\n', T0), /does not look like/);
   t.throws(() => QDF.serialize.fromYaml('name: x\nage: 3\n', T0), /none of/);
   t.throws(() => QDF.serialize.fromYaml('format: other/1\n', T0), /Unrecognised format/);
-  t.throws(() => QDF.serialize.fromYaml('format: qdvc-focus/3\n', T0), /newer version/);
-  t.throws(() => QDF.serialize.fromYaml('current:\n  title: x\n   y: 1\n', T0), /Line 3/);
+  t.throws(() => QDF.serialize.fromYaml('format: qdvc-focus/4\n', T0), /newer version/);
+  t.throws(() => QDF.serialize.fromYaml('format: qdvc-focus/2\nqueue: []\n', T0), /earlier format/);
+  t.throws(() => QDF.serialize.fromYaml('format: qdvc-focus/1\nqueue: []\n', T0), /earlier format/);
+  t.throws(() => QDF.serialize.fromYaml('active:\n  - title: x\n   y: 1\n', T0), /Line 3/);
 });
 
 /* --------------------------------------------------------------- store */
@@ -319,23 +269,39 @@ t.check('store: commit saves, stamps interaction and can be undone', () => {
   const before = S.get();
   clock.t += MIN;
   S.commit('Start', (s, now) => M.start(s, s.queue[0].id, now));
-  t.ok(before.current === null, 'previous state object is untouched');
+  t.ok(before.active.length === 0, 'previous state object is untouched');
   t.eq(S.undo(), 'Start');
-  t.eq(S.get().current, null);
+  t.eq(S.get().active, []);
   t.eq(S.get().queue[0].stretches, [], 'undo removes the stretch too');
   t.eq(events, ['commit', 'commit', 'undo']);
   const reloaded = storeWith(storage, clock);
   t.eq(reloaded.store.get().queue.map(x => x.title), ['a'], 'persisted across loads');
 });
 
-t.check('store: version 1 saved data is converted on load', () => {
+t.check('store: switching the foreground is saved but is not an undo step', () => {
   const storage = memoryStorage(), clock = { t: T0 };
-  storage.setItem('qdvc-focus.v1', JSON.stringify({
-    format: 'qdvc-focus/1', current: null,
-    queue: [{ id: 'q', title: 'Paused one', started: '2026-10-21T08:00:00.000Z', focus_seconds: 300 }]
-  }));
   const QDF = storeWith(storage, clock);
-  t.eq(QDF.store.get().queue[0].stretches.length, 1);
+  const S = QDF.store, M = QDF.model;
+  S.commit('Add', (s, now) => { M.add(s, 'a', '', null, now); return M.add(s, 'b', '', null, now); });
+  S.commit('Start a', (s, now) => M.start(s, s.queue[0].id, now));
+  S.commit('Start b', (s, now) => M.start(s, s.queue[0].id, now));
+  const a = S.get().active[0].id;
+  clock.t += 5 * MIN;
+  t.ok(S.quiet(s => M.setForeground(s, a)));
+  t.eq(S.get().foreground, a);
+  t.eq(S.undoLabel(), 'Start b', 'nothing added to the undo stack');
+  t.eq(M.idle(S.get(), clock.t), 0, 'counts as an interaction');
+  t.eq(storeWith(storage, clock).store.get().foreground, a, 'saved');
+  t.eq(S.quiet(s => M.setForeground(s, a)), null, 'a no-op stays a no-op');
+});
+
+t.check('store: an unreadable or earlier-format save is kept aside, not lost', () => {
+  const storage = memoryStorage(), clock = { t: T0 };
+  storage.setItem('qdvc-focus.v1', JSON.stringify({ format: 'qdvc-focus/2', queue: [] }));
+  const QDF = storeWith(storage, clock);
+  t.ok(/could not be read/.test(QDF.store.takeNotice()));
+  t.ok(/qdvc-focus\/2/.test(storage.getItem('qdvc-focus.v1.unreadable')));
+  t.eq(QDF.store.get().queue, []);
 });
 
 t.check('store: touch counts as interaction without an undo step', () => {
@@ -347,12 +313,9 @@ t.check('store: touch counts as interaction without an undo step', () => {
   t.eq(QDF.store.undoLabel(), null);
 });
 
-t.check('store: replace is undoable and unreadable saves are kept aside', () => {
+t.check('store: replace is undoable', () => {
   const storage = memoryStorage(), clock = { t: T0 };
-  storage.setItem('qdvc-focus.v1', '{not json');
   const QDF = storeWith(storage, clock);
-  t.ok(/could not be read/.test(QDF.store.takeNotice()));
-  t.eq(storage.getItem('qdvc-focus.v1.unreadable'), '{not json');
   const other = QDF.model.newState(T0);
   QDF.model.add(other, 'imported', '', null, T0);
   QDF.store.replace(other, 'Import');
@@ -366,7 +329,7 @@ t.check('store: resetAll removes every key the app owns, and only those', () => 
   storage.setItem('someone-else', 'keep me');
   const QDF = storeWith(storage, clock);
   QDF.store.commit('Add', (s, now) => QDF.model.add(s, 'a', '', null, now));
-  storage.setItem('qdvc-focus.prefs.v1', '{"theme":"dark"}');
+  storage.setItem('qdvc-focus.prefs.v1', '{"theme":"dark","timers":false}');
   storage.setItem('qdvc-focus.v1.unreadable', 'x');
   t.eq(QDF.store.usage().keys, 3);
   const events = [];

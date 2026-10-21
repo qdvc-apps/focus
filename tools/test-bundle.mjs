@@ -45,7 +45,7 @@ t.check('script evaluates under strict mode', () => {
   for (const key of ['APP', 'GEOM', 'util', 'yaml', 'model', 'store', 'serialize', 'timeline', 'prefs', 'ui', 'view', 'transfer', 'settings', 'keys', 'app']) {
     t.ok(QDF[key], 'missing QDF.' + key);
   }
-  t.eq(QDF.APP.format, 'qdvc-focus/2');
+  t.eq(QDF.APP.format, 'qdvc-focus/3');
 });
 
 t.check('.nojekyll is present for GitHub Pages', () => {
