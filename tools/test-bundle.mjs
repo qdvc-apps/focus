@@ -42,10 +42,10 @@ t.check('script evaluates under strict mode', () => {
   const ctx = makeContext();
   vm.runInContext(script + '\n;globalThis.QDF = QDF;', ctx, { filename: 'docs/index.html' });
   const QDF = ctx.QDF;
-  for (const key of ['APP', 'util', 'yaml', 'model', 'store', 'serialize', 'ui', 'view', 'editor', 'transfer', 'about', 'keys', 'app']) {
+  for (const key of ['APP', 'GEOM', 'util', 'yaml', 'model', 'store', 'serialize', 'timeline', 'prefs', 'ui', 'view', 'transfer', 'settings', 'keys', 'app']) {
     t.ok(QDF[key], 'missing QDF.' + key);
   }
-  t.eq(QDF.APP.format, 'qdvc-focus/1');
+  t.eq(QDF.APP.format, 'qdvc-focus/2');
 });
 
 t.check('.nojekyll is present for GitHub Pages', () => {

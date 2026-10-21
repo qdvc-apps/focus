@@ -1,0 +1,416 @@
+/* ==========================================================================
+   40-timeline.css — the timeline: rows, the graph column (lines, curves and
+   nodes), and the cards beside it.
+
+   Each row is a three-column grid: time | graph | card. The graph column is
+   as wide as the lanes in use (--graph-w, set by the view). Lines are thin
+   absolutely-positioned bars anchored to the top or bottom of their row, and
+   the node sits a fixed distance from the top (--node-y), so rows can be any
+   height without the drawing stretching.
+   ========================================================================== */
+
+.timeline-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.timeline {
+  --node-y: 24px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 26px 48px 160px 40px;
+}
+
+.tl-origin {
+  padding: 4px 0 18px calc(58px + var(--graph-w));
+  font-size: var(--fs-sm);
+  color: var(--ink-faint);
+}
+
+.tl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px var(--graph-w) minmax(0, 1fr);
+}
+
+.tl-time {
+  padding: 16px 10px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 16px;
+  text-align: right;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 var(--emboss);
+  white-space: nowrap;
+}
+
+.tl-graph { position: relative; }
+
+.tl-body {
+  min-width: 0;
+  padding: 6px 0 8px 4px;
+}
+
+/* Rows whose card fills the row, so a longer stretch is a taller card. */
+.tl-fill .tl-body { display: flex; flex-direction: column; }
+.tl-fill .tl-card { flex: 1; }
+
+/* ---------------------------------------------------------------- lanes */
+
+.lc0 { --lc: var(--lane0); }
+.lc1 { --lc: var(--lane1); }
+.lc2 { --lc: var(--lane2); }
+.lc3 { --lc: var(--lane3); }
+.lc4 { --lc: var(--lane4); }
+
+/* A line is a little tube: darker at the edges, a highlight down the middle. */
+.ln {
+  position: absolute;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+}
+
+.ln-solid, .ln-bg {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .22), rgba(255, 255, 255, .38) 45%, rgba(0, 0, 0, .14)),
+    var(--lc);
+}
+
+.ln-idle {
+  background: repeating-linear-gradient(to bottom, var(--lc) 0 5px, transparent 5px 10px);
+  opacity: .5;
+  width: 2px;
+  margin-left: -1px;
+}
+
+.ln-future {
+  width: 2px;
+  margin-left: -1px;
+  background: repeating-linear-gradient(to bottom, var(--lane-future) 0 2px, transparent 2px 7px);
+}
+
+.curve {
+  position: absolute;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.curve path {
+  fill: none;
+  stroke: var(--lc);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.curve path + path {
+  stroke: rgba(255, 255, 255, .35);
+  stroke-width: 1.2;
+}
+
+/* ---------------------------------------------------------------- nodes */
+
+/* Glossy beads, ringed in the desk colour so they sit on top of the line. */
+.node {
+  position: absolute;
+  top: var(--node-y);
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .8), rgba(255, 255, 255, 0) 48%),
+    var(--lc);
+  box-shadow: 0 0 0 2px var(--desk-top), 0 1px 3px rgba(0, 0, 0, .35);
+}
+
+.node .icon {
+  width: 10px;
+  height: 10px;
+  margin: 2px;
+  color: #fff;
+  stroke-width: 3;
+}
+
+.node-done {
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0) 48%),
+    var(--go);
+}
+
+.node-small { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+
+.node-hollow {
+  background: var(--field-bg);
+  box-shadow: inset 0 0 0 2px var(--lc), 0 0 0 2px var(--desk-top);
+}
+
+.node-present {
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  animation: present-ring 2.2s ease-out infinite;
+}
+
+@keyframes present-ring {
+  0% { box-shadow: 0 0 0 2px var(--desk-top), 0 0 0 2px var(--lc); }
+  70%, 100% { box-shadow: 0 0 0 2px var(--desk-top), 0 0 0 12px rgba(0, 0, 0, 0); }
+}
+
+.node-running { animation: lane-ring 1.8s ease-out infinite; }
+
+@keyframes lane-ring {
+  0% { box-shadow: 0 0 0 2px var(--desk-top), 0 0 0 2px color-mix(in srgb, var(--lc) 70%, transparent); }
+  80%, 100% { box-shadow: 0 0 0 2px var(--desk-top), 0 0 0 9px transparent; }
+}
+
+.node-future {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: var(--field-bg);
+  box-shadow: inset 0 0 0 2px var(--lane-future), 0 0 0 2px var(--desk-top);
+}
+
+.node-next { box-shadow: inset 0 0 0 3px var(--lane0), 0 0 0 2px var(--desk-top); }
+
+.node-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  color: var(--ink-dim);
+  background: var(--field-bg);
+  box-shadow: inset 0 0 0 1.5px var(--lane-future), 0 0 0 2px var(--desk-top);
+}
+
+.node-add .icon { width: 10px; height: 10px; color: var(--ink-dim); stroke-width: 2.4; margin: 0; }
+
+/* ---------------------------------------------------------------- cards */
+
+.tl-card {
+  position: relative;
+  max-width: 600px;
+  padding: 8px 12px 9px;
+  background: linear-gradient(var(--card-hi), var(--card-lo));
+  border: 1px solid var(--card-edge);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--shine), 0 1px 2px var(--shadow);
+  cursor: pointer;
+}
+
+.tl-card:hover { filter: var(--hover-lift); }
+
+.tl-card.is-past {
+  background: linear-gradient(var(--past-hi), var(--past-lo));
+  box-shadow: inset 0 1px 0 var(--shine), 0 1px 1px var(--shadow);
+}
+
+.tl-card.is-past .tl-title { font-weight: 600; color: var(--ink-mid); }
+
+.tl-card.is-selected,
+.present-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--shine), 0 0 0 3px var(--accent-soft), 0 1px 2px var(--shadow);
+}
+
+.tl-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.tl-note {
+  margin-top: 1px;
+  font-size: var(--fs-sm);
+  color: var(--ink-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small recessed status chips. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 17px;
+  padding: 0 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ink-mid);
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 9px;
+  box-shadow: inset 0 1px 2px var(--shadow), 0 1px 0 var(--sep-hi);
+  white-space: nowrap;
+}
+
+.chip .icon { width: 11px; height: 11px; stroke-width: 2.2; }
+.chip-done { color: var(--go); }
+.chip-next { color: #fff; background: linear-gradient(#5f9de9, #3a7bd5); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 1px 1px var(--shadow); text-shadow: 0 -1px 0 rgba(0, 0, 0, .25); }
+
+/* Hover tools on a card, laid over its top-right corner. */
+.tl-tools {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 1px;
+  padding-left: 18px;
+  background: linear-gradient(to right, transparent, var(--card-hi) 16px);
+  border-radius: 0 6px 6px 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+}
+
+.tl-card:hover .tl-tools,
+.tl-card:focus-within .tl-tools { opacity: 1; pointer-events: auto; }
+body.dragging-task .tl-tools { opacity: 0 !important; }
+
+/* ------------------------------------------------------ background rows */
+
+.tl-card-bg { max-width: 460px; }
+
+.tl-card-bg .tl-title::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 7px 1px 0;
+  border-radius: 50%;
+  background: var(--lc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
+}
+
+.tl-bg-run {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Indeterminate progress in the lane's colour: something is working, and
+   nobody knows how long it will take. */
+.pole-track {
+  flex: 1;
+  height: 9px;
+  overflow: hidden;
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 5px;
+  box-shadow: inset 0 1px 2px var(--shadow-deep), 0 1px 0 var(--sep-hi);
+}
+
+.pole {
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, .05) 55%, rgba(0, 0, 0, .1)),
+    repeating-linear-gradient(-45deg, var(--lc) 0 7px, color-mix(in srgb, var(--lc) 55%, #fff) 7px 14px);
+  background-size: 100% 100%, 19.8px 100%;
+  border-radius: 5px;
+  animation: pole 1.1s linear infinite;
+}
+
+@keyframes pole {
+  to { background-position: 0 0, 19.8px 0; }
+}
+
+/* ------------------------------------------------------- one-line rows */
+
+.tl-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 var(--emboss);
+}
+
+.tl-line .icon { width: 13px; height: 13px; }
+.tl-line b { color: var(--ink-mid); }
+.tl-gap .tl-line { padding-top: 7px; font-style: italic; font-size: var(--fs-xs); }
+
+.tl-day .tl-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.tl-day-name { font-weight: 700; font-size: var(--fs-sm); color: var(--ink-mid); text-shadow: 0 1px 0 var(--emboss); }
+.tl-day-date { font-size: var(--fs-xs); color: var(--ink-dim); }
+.tl-day .etched { flex: 1; }
+
+/* -------------------------------------------------------------- future */
+
+.tl-card.is-future {
+  background: linear-gradient(var(--past-hi), var(--past-lo));
+  cursor: grab;
+}
+
+.tl-card.is-future:active { cursor: grabbing; }
+.tl-card.is-next { background: linear-gradient(var(--card-hi), var(--card-lo)); box-shadow: inset 0 1px 0 var(--shine), 0 2px 4px var(--shadow); }
+.tl-card.is-dragging { opacity: .4; }
+
+.tl-future { position: relative; }
+
+.tl-future.drop-active::before {
+  content: '';
+  position: absolute;
+  inset: -4px -6px -4px calc(58px + var(--graph-w) - 2px);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+
+/* The marker takes no space, so placing it never moves the rows it is
+   measured against. */
+.drop-marker { position: relative; height: 0; }
+
+.drop-marker::before {
+  content: '';
+  position: absolute;
+  left: calc(58px + var(--graph-w) + 4px);
+  right: 0;
+  max-width: 600px;
+  top: -2px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(#6aa8ef, #2f6fca);
+  box-shadow: 0 1px 2px rgba(30, 80, 160, .45);
+}
+
+.drop-marker::after {
+  content: '';
+  position: absolute;
+  left: calc(58px + var(--graph-w));
+  top: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--field-bg);
+  border: 2px solid #2f6fca;
+}
+
+.add-form { display: flex; gap: 6px; max-width: 600px; }
+.add-form .field { flex: 1; min-width: 0; }
+.add-hint { margin-top: 5px; font-size: var(--fs-xs); color: var(--ink-dim); }

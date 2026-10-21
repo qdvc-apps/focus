@@ -1,7 +1,7 @@
 /* ==========================================================================
    80-keys.js — keyboard shortcuts. Single-key shortcuts are ignored while
    typing in a field, while a dialog or menu is open, and with modifiers.
-   The About dialog lists them; keep the two in step.
+   The table in 70-settings.js (About) lists them; keep the two in step.
    ========================================================================== */
 
 QDF.keys = (function () {
@@ -16,8 +16,8 @@ QDF.keys = (function () {
     var typing = isTyping(t);
     var mod = e.ctrlKey || e.metaKey;
 
-    if (e.key === 'Escape' && typing && (t.id === 'add-input' || t.id === 'quick-start-input')) {
-      t.value = '';
+    if (e.key === 'Escape' && typing) {
+      if (t.id === 'add-input' || t.id === 'quick-start-input') t.value = '';
       t.blur();
       return;
     }
@@ -28,15 +28,16 @@ QDF.keys = (function () {
     }
     if (typing || mod || e.altKey || QDF.ui.isOpen()) return;
 
-    if (e.key === 'n' || e.key === 'N' || e.key === '/') {
-      e.preventDefault();
-      QDF.app.focusAdd();
-    } else if (e.key === 'y' || e.key === 'Y') {
-      e.preventDefault();
-      QDF.transfer.showYaml();
-    } else if (e.key === '?') {
-      e.preventDefault();
-      QDF.about.show();
+    var A = QDF.app.actions;
+    switch (e.key) {
+      case 'n': case 'N': case '/': e.preventDefault(); QDF.app.focusAdd(); break;
+      case '.': e.preventDefault(); A['jump-now'](); break;
+      case '[': e.preventDefault(); A['toggle-overview'](); break;
+      case ']': e.preventDefault(); A['toggle-inspector'](); break;
+      case 'y': case 'Y': e.preventDefault(); QDF.transfer.showYaml(); break;
+      case ',': e.preventDefault(); QDF.settings.show(); break;
+      case '?': e.preventDefault(); QDF.settings.show('about'); break;
+      case 'Escape': QDF.app.select(null); break;
     }
   }
 

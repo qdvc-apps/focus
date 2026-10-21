@@ -1,72 +1,217 @@
 /* ==========================================================================
-   00-tokens.css — the single source of truth for colour, type and metrics.
-   The look is deliberately tactile: lit-from-above gradients, inset wells,
-   bevelled controls. Surfaces are warm greys so the blue and green accents
-   read as signals rather than decoration.
+   00-tokens.css — the single source of truth for colour, type and metrics,
+   in a light and a dark theme. 40-prefs.js sets data-theme on <html> to
+   "light" or "dark" (resolving "auto" from the system setting).
+
+   Both themes are deliberately tactile: lit-from-above gradients, inset
+   wells, bevelled controls. Nothing outside this file names a colour
+   directly, except where a hue is fixed by meaning in both themes.
    ========================================================================== */
 
 :root {
-  /* type */
+  color-scheme: light;
+
   --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* ink */
-  --ink:        #23211d;
-  --ink-mid:    #57524a;
-  --ink-dim:    #7d776d;
-  --ink-faint:  #a39d92;
+  --ink:         #23211d;
+  --ink-mid:     #57524a;
+  --ink-dim:     #7d776d;
+  --ink-faint:   #a39d92;
+  --emboss:      rgba(255, 255, 255, .85);   /* 1px text-shadow under labels */
 
   /* the desk behind everything */
-  --desk-top:   #e3e0da;
-  --desk-bot:   #cfcbc3;
+  --desk-top:    #e4e1db;
+  --desk-bot:    #d0ccc4;
 
-  /* raised surfaces */
-  --panel-hi:   #fefefd;
-  --panel-lo:   #f2f0eb;
-  --panel-edge: #b3aea4;
-  --head-hi:    #fbfaf8;
-  --head-lo:    #e7e4de;
-  --line:       #d6d2c9;
-  --line-hi:    #ffffff;
+  /* raised surfaces: drawers, dialogs */
+  --surface-hi:  #fefefd;
+  --surface-lo:  #f1efea;
+  --surface-edge:#b3aea4;
+  --shine:       rgba(255, 255, 255, 1);     /* inset highlight on top edges */
+
+  /* bars: toolbar, dialog title bars */
+  --bar-hi:      #fbfaf8;
+  --bar-mid:     #e7e4de;
+  --bar-lo:      #d6d2ca;
+  --bar-edge:    #958f84;
+
+  /* timeline cards */
+  --card-hi:     #ffffff;
+  --card-lo:     #f4f2ee;
+  --card-edge:   #bcb7ad;
+  --past-hi:     #faf9f6;
+  --past-lo:     #f0eee9;
 
   /* sunken wells */
-  --well-hi:    #d9d5cd;
-  --well-lo:    #e7e4dd;
+  --well-hi:     #d9d5cd;
+  --well-lo:     #e7e4dd;
+
+  /* etched separators: a dark line with a light line under it */
+  --sep:         #d6d2c9;
+  --sep-hi:      #ffffff;
+
+  /* plain buttons */
+  --btn-1:       #ffffff;
+  --btn-2:       #f2f0ec;
+  --btn-3:       #e2dfd8;
+  --btn-4:       #ebe8e2;
+  --btn-edge:    #a19b90;
+  --btn-edge-b:  #8c867b;
+  --btn-ink:     #2e2a25;
+  --btn-shine:   rgba(255, 255, 255, .95);
+  --btn-press-1: #d4d0c8;
+  --btn-press-2: #e2dfd8;
+  --hover-lift:  brightness(1.03);
+
+  /* text fields */
+  --field-bg:    #ffffff;
+  --field-edge:  #aca69a;
+  --field-edge-t:#958f83;
+
+  /* shadows */
+  --shadow:      rgba(40, 34, 24, .14);
+  --shadow-deep: rgba(30, 25, 15, .28);
 
   /* accents */
-  --blue-hi:    #7db6f3;
-  --blue:       #3a7bd5;
-  --blue-lo:    #2d6cc4;
-  --blue-edge:  #24599f;
-  --go-hi:      #82d396;
-  --go:         #46a560;
-  --go-lo:      #379250;
-  --go-edge:    #29703d;
-  --red:        #b4362a;
-  --red-edge:   #85251c;
-  --amber:      #c98314;
-  --amber-lo:   #9a6208;
+  --accent:      #3a7bd5;
+  --accent-hi:   #7db6f3;
+  --accent-mid:  #4d8fe2;
+  --accent-lo:   #2d6cc4;
+  --accent-edge: #24599f;
+  --accent-ink:  #2c66b8;
+  --accent-soft: rgba(58, 123, 213, .12);
+  --go:          #46a560;
+  --go-hi:       #82d396;
+  --go-mid:      #55b26e;
+  --go-lo:       #379250;
+  --go-edge:     #29703d;
+  --red:         #b4362a;
+  --red-edge:    #85251c;
+  --amber-ink:   #9a6208;
+  --now-line:    #d0453a;
 
-  /* the clock and the code view */
-  --glass-hi:   #383e46;
-  --glass-lo:   #1a1d21;
-  --glass-ink:  #f3efe6;
-  --glass-dim:  #9aa3ad;
+  /* timeline lanes: 0 is the main line, the rest are background branches */
+  --lane0:       #3a7bd5;
+  --lane1:       #d08a1e;
+  --lane2:       #2a9d8f;
+  --lane3:       #8a5cc7;
+  --lane4:       #c9506b;
+  --lane-future: #a8a296;
+
+  /* the clock face */
+  --glass-hi:    #383e46;
+  --glass-lo:    #1a1d21;
+  --glass-edge:  #0f1114;
+  --glass-ink:   #f3efe6;
+  --glass-dim:   #9aa3ad;
+
+  /* the backlit "since last update" display */
+  --lcd-hi:      #e9eadf;
+  --lcd-lo:      #f7f7f0;
+  --lcd-edge:    #8a8579;
+  --lcd-ink:     #2a2924;
+  --lcd-dim:     #6c6a5f;
+
+  /* menus, overlays, code */
+  --menu-hi:     #fdfdfc;
+  --menu-lo:     #f1efeb;
+  --menu-edge:   #8d877c;
+  --backdrop:    rgba(40, 36, 30, .38);
+  --code-hi:     #272b31;
+  --code-lo:     #1c1f24;
 
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-md: 13px;
-  --fs-lg: 15px;
 
+  --toolbar-h: 50px;
+  --drawer-w: 320px;
   --radius: 6px;
-  --radius-lg: 10px;
+}
 
-  --toolbar-h: 54px;
-  --statusbar-h: 26px;
-  --side-w: 390px;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-  --ring: 0 0 0 3px rgba(58, 123, 213, .38);
-  --raise-1: inset 0 1px 0 #fff, 0 1px 2px rgba(40, 34, 24, .12);
-  --raise-2: inset 0 1px 0 #fff, 0 1px 1px rgba(40, 34, 24, .08), 0 3px 10px rgba(40, 34, 24, .12);
-  --sink: inset 0 2px 4px rgba(0, 0, 0, .14), inset 0 0 0 1px rgba(0, 0, 0, .07), 0 1px 0 #fff;
+  --ink:         #ebe8e2;
+  --ink-mid:     #c4c0b8;
+  --ink-dim:     #9a968e;
+  --ink-faint:   #6e6b65;
+  --emboss:      rgba(0, 0, 0, .55);
+
+  --desk-top:    #2b2d31;
+  --desk-bot:    #1c1d20;
+
+  --surface-hi:  #393c41;
+  --surface-lo:  #2e3135;
+  --surface-edge:#0f1012;
+  --shine:       rgba(255, 255, 255, .08);
+
+  --bar-hi:      #4b4e54;
+  --bar-mid:     #3b3e43;
+  --bar-lo:      #313438;
+  --bar-edge:    #0c0d0f;
+
+  --card-hi:     #46494f;
+  --card-lo:     #3a3d42;
+  --card-edge:   #141517;
+  --past-hi:     #3b3e43;
+  --past-lo:     #33363a;
+
+  --well-hi:     #1a1b1e;
+  --well-lo:     #24262a;
+
+  --sep:         #18191c;
+  --sep-hi:      rgba(255, 255, 255, .06);
+
+  --btn-1:       #5b5f66;
+  --btn-2:       #4b4f56;
+  --btn-3:       #3e4147;
+  --btn-4:       #44484e;
+  --btn-edge:    #17181b;
+  --btn-edge-b:  #0d0e10;
+  --btn-ink:     #f0eee9;
+  --btn-shine:   rgba(255, 255, 255, .15);
+  --btn-press-1: #2a2c30;
+  --btn-press-2: #35383d;
+  --hover-lift:  brightness(1.12);
+
+  --field-bg:    #1f2124;
+  --field-edge:  #0f1012;
+  --field-edge-t:#08090a;
+
+  --shadow:      rgba(0, 0, 0, .45);
+  --shadow-deep: rgba(0, 0, 0, .65);
+
+  --accent:      #4b8fe6;
+  --accent-ink:  #8cbcf5;
+  --accent-soft: rgba(75, 143, 230, .2);
+  --amber-ink:   #f0b14d;
+  --red:         #ef7468;
+  --now-line:    #ff6b5e;
+
+  --lane0:       #5a9cf0;
+  --lane1:       #e3a03a;
+  --lane2:       #3fb7a8;
+  --lane3:       #a67de0;
+  --lane4:       #e06a86;
+  --lane-future: #6f6c66;
+
+  --glass-hi:    #30353c;
+  --glass-lo:    #121417;
+  --glass-edge:  #050607;
+
+  --lcd-hi:      #1f2925;
+  --lcd-lo:      #26322d;
+  --lcd-edge:    #08090a;
+  --lcd-ink:     #c9f0d4;
+  --lcd-dim:     #7fa392;
+
+  --menu-hi:     #46494f;
+  --menu-lo:     #393c41;
+  --menu-edge:   #0c0d0f;
+  --backdrop:    rgba(0, 0, 0, .5);
+  --code-hi:     #1d2024;
+  --code-lo:     #141619;
 }

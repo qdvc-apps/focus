@@ -1,57 +1,71 @@
 # QDVC Focus state
-# queue: the first entry is up next. Times are ISO 8601 (UTC);
-# *_seconds hold time banked from earlier stretches.
-format: qdvc-focus/1
-saved: 2026-10-21T10:30:00.000Z
-created: 2026-10-21T07:55:00.000Z
-last_interaction: 2026-10-21T10:12:00.000Z
+# queue: the first entry is up next. done: newest first.
+# stretches: when each task was in focus or in the background, as
+# ISO 8601 intervals in UTC; ".." marks one still running.
+format: qdvc-focus/2
+saved: 2026-10-21T10:50:00.000Z
+created: 2026-10-20T15:50:00.000Z
+last_interaction: 2026-10-21T10:34:00.000Z
 
 current:
-  id: t-mvhtl2yo-m95u
+  id: t-plan
   title: Draft the Q4 migration plan
   notes: |-
     Owner sign-off needed from Priya.
     Left off at: the rollback section.
   created: 2026-10-21T07:58:00.000Z
-  started: 2026-10-21T09:00:00.000Z
-  focused_since: 2026-10-21T10:12:00.000Z
-  focus_seconds: 3900
+  stretches:
+    - focus: 2026-10-21T09:00:00.000Z/2026-10-21T10:05:00.000Z
+    - focus: 2026-10-21T10:12:00.000Z/2026-10-21T10:20:00.000Z
+    - focus: 2026-10-21T10:34:00.000Z/..
 
 queue:
-  - id: t-mvhtq85c-q3ja
+  - id: t-review
     title: Review the pull request on the export endpoint
     notes: "PR #482"
     created: 2026-10-21T08:02:00.000Z
-  - id: t-mvhtu31c-yccp
+  - id: t-vendor
     title: Reply to the vendor about the licence renewal
     created: 2026-10-21T08:05:00.000Z
-  - id: t-mvhtvdc0-q84l
+  - id: t-onboard
     title: Update the onboarding checklist
     notes: Add the VPN step.
     created: 2026-10-21T08:06:00.000Z
 
 background:
-  - id: t-mvhtnnk0-cau0
+  - id: t-regress
     title: Run the nightly regression suite on staging
     created: 2026-10-21T08:00:00.000Z
-    started: 2026-10-21T10:05:00.000Z
-    background_since: 2026-10-21T10:12:00.000Z
-    focus_seconds: 420
+    stretches:
+      - focus: 2026-10-21T10:05:00.000Z/2026-10-21T10:12:00.000Z
+      - background: 2026-10-21T10:12:00.000Z/..
 
 done:
-  - id: t-mvhtiidc-7wcl
+  - id: t-oncall
+    title: Answer the on-call handover questions
+    created: 2026-10-21T10:20:00.000Z
+    finished: 2026-10-21T10:34:00.000Z
+    stretches:
+      - focus: 2026-10-21T10:20:00.000Z/2026-10-21T10:34:00.000Z
+  - id: t-docker
     title: Rebuild the Docker base image
     notes: |-
       Bump to the October security patches.
       Push as :2026.10 and :latest.
     created: 2026-10-21T07:56:00.000Z
-    started: 2026-10-21T08:45:00.000Z
     finished: 2026-10-21T09:40:00.000Z
-    focus_seconds: 900
-    background_seconds: 2400
-  - id: t-mvhth82o-3tlv
+    stretches:
+      - focus: 2026-10-21T08:45:00.000Z/2026-10-21T09:00:00.000Z
+      - background: 2026-10-21T09:00:00.000Z/2026-10-21T09:40:00.000Z
+  - id: t-triage
     title: Triage overnight alerts
     created: 2026-10-21T07:55:00.000Z
-    started: 2026-10-21T08:10:00.000Z
     finished: 2026-10-21T08:45:00.000Z
-    focus_seconds: 2100
+    stretches:
+      - focus: 2026-10-21T08:10:00.000Z/2026-10-21T08:45:00.000Z
+  - id: t-release
+    title: Write release notes for 2.14
+    created: 2026-10-20T15:50:00.000Z
+    finished: 2026-10-20T17:05:00.000Z
+    stretches:
+      - focus: 2026-10-20T16:00:00.000Z/2026-10-20T17:05:00.000Z

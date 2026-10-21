@@ -10,6 +10,9 @@ QDF.util = (function () {
   var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var LONG_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                     'July', 'August', 'September', 'October', 'November', 'December'];
 
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
@@ -106,6 +109,22 @@ QDF.util = (function () {
     return label;
   }
 
+  /* Wednesday 21 October (and the year when it is not this year). */
+  function longDate(isoString, nowMs) {
+    var d = localDate(isoString);
+    if (!d) return '';
+    var label = LONG_DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + LONG_MONTHS[d.getMonth()];
+    if (nowMs && d.getFullYear() !== new Date(nowMs).getFullYear()) label += ' ' + d.getFullYear();
+    return label;
+  }
+
+  /* Local midnight at the start of the day containing `ms`. */
+  function dayStart(msValue) {
+    var d = new Date(msValue);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
   /* 2026-10-21-1405, local time, for file names. */
   function fileStamp(nowMs) {
     var d = new Date(nowMs);
@@ -145,6 +164,7 @@ QDF.util = (function () {
     secondsSince: secondsSince, uid: uid,
     clock: clock, duration: duration, ago: ago,
     timeOfDay: timeOfDay, dayKey: dayKey, dayLabel: dayLabel, fileStamp: fileStamp,
+    longDate: longDate, dayStart: dayStart,
     plural: plural, firstLine: firstLine,
     download: download, readFile: readFile
   };

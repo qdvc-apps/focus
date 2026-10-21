@@ -11,40 +11,33 @@
     <div class="idle-slot" id="idle-slot"></div>
     <div class="toolbar-spacer"></div>
     <div class="toolbar-tools">
-      <button type="button" class="tbtn" id="btn-undo" data-act="undo" disabled title="Nothing to undo"><span data-icon="undo"></span><span>Undo</span></button>
-      <div class="segmented" role="group" aria-label="State">
-        <button type="button" class="tbtn" data-act="show-yaml" title="Show the current state as YAML (Y)"><span data-icon="code"></span><span>YAML</span></button>
-        <button type="button" class="tbtn" data-act="import" title="Import a saved state"><span data-icon="importFile"></span><span>Import</span></button>
-        <button type="button" class="tbtn" data-act="export" title="Download the current state as a .yaml file"><span data-icon="exportFile"></span><span>Export</span></button>
-      </div>
-      <button type="button" class="tbtn tbtn-round" data-act="about" title="About and keyboard shortcuts (?)" aria-label="About and keyboard shortcuts"><span data-icon="info"></span></button>
+      <button type="button" class="tbtn" id="btn-undo" data-act="undo" disabled title="Nothing to undo" aria-label="Nothing to undo"><span data-icon="undo"></span></button>
+      <button type="button" class="tbtn" data-act="settings" title="Settings (,)" aria-label="Settings"><span data-icon="gear"></span></button>
     </div>
   </header>
 
-  <main class="workspace">
-    <div class="col-main">
-      <section class="now-slot" id="now" aria-label="Working on now"></section>
-      <div id="background"></div>
-      <div id="done"></div>
-    </div>
-
-    <aside class="col-side panel queue-panel" aria-label="Queue">
-      <div class="panel-head">
-        <span class="panel-title">Queue</span>
-        <span class="count-badge" id="queue-count"></span>
-      </div>
-      <form class="add-form" data-form="add" autocomplete="off">
-        <div class="field-row">
-          <input class="field" id="add-input" name="title" maxlength="300" placeholder="Add a task…" aria-label="Add a task to the queue">
-          <button type="submit" class="btn"><span data-icon="plus"></span><span>Add</span></button>
-        </div>
-        <div class="hint"><kbd>Enter</kbd> adds to the end · <kbd>Shift</kbd>+<kbd>Enter</kbd> adds as up next</div>
-      </form>
-      <div class="queue-body" id="queue-body"></div>
+  <div class="workspace" id="workspace">
+    <aside class="drawer drawer-left" id="drawer-left" aria-label="Overview">
+      <div class="drawer-inner" id="overview"></div>
     </aside>
-  </main>
 
-  <footer class="statusbar" id="statusbar" role="contentinfo"></footer>
+    <main class="stage">
+      <div class="timeline-scroll" id="timeline-scroll">
+        <div class="timeline" id="timeline" aria-label="Timeline"></div>
+      </div>
+      <button type="button" class="drawer-handle handle-left" id="handle-left" data-act="toggle-overview" aria-controls="drawer-left" aria-expanded="false" title="Overview ([)">
+        <span class="handle-grip" aria-hidden="true"></span><span class="handle-label">Overview</span><span class="handle-chevron" data-icon="chevron"></span>
+      </button>
+      <button type="button" class="drawer-handle handle-right" id="handle-right" data-act="toggle-inspector" aria-controls="drawer-right" aria-expanded="false" title="Inspector (])">
+        <span class="handle-grip" aria-hidden="true"></span><span class="handle-label">Inspector</span><span class="handle-chevron" data-icon="chevron"></span>
+      </button>
+      <button type="button" class="jump-now" id="jump-now" data-act="jump-now" data-dir="down" hidden title="Jump to now (.)"><span data-icon="down"></span><span>Jump to now</span></button>
+    </main>
+
+    <aside class="drawer drawer-right" id="drawer-right" aria-label="Inspector">
+      <div class="drawer-inner" id="inspector"></div>
+    </aside>
+  </div>
 </div>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>

@@ -27,6 +27,8 @@ export function memoryStorage() {
       data.set(k, String(v));
     },
     removeItem(k) { data.delete(k); },
+    get length() { return data.size; },
+    key(i) { return [...data.keys()][i] ?? null; },
     keys() { return [...data.keys()]; }
   };
 }

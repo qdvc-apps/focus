@@ -26,6 +26,10 @@ QDF.ICONS = {
   queueEnd: '<path d="M4 5h12M4 9h12M4 13h6M14 12v5M11.5 14.5L14 17l2.5-2.5"/>',
   copy: '<rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-6A1.5 1.5 0 0 0 4 5.5v6A1.5 1.5 0 0 0 5.5 13H7"/>',
   clock: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.5V10l2.5 1.5"/>',
+  down: '<path d="M10 4v11M5.5 10.5L10 15l4.5-4.5"/>',
+  gear: '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4"/><circle cx="10" cy="10" r="5.2"/>',
+  palette: '<path d="M10 3a7 7 0 1 0 0 14c1.2 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H14a3 3 0 0 0 3-3c0-3.9-3.1-7-7-7z"/><circle cx="6.5" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="12.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>',
+  database: '<ellipse cx="10" cy="5" rx="6" ry="2.3"/><path d="M4 5v10c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3V5M4 10c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3"/>',
   hand: '<path d="M7 10V5.5a1.2 1.2 0 0 1 2.4 0V9M9.4 9V4.5a1.2 1.2 0 0 1 2.4 0V9M11.8 9V5.5a1.2 1.2 0 0 1 2.4 0V11c0 3-2 5-4.7 5-2 0-3.2-1-4.3-2.6L3.6 11a1.2 1.2 0 0 1 2-1.3L7 11.5"/>'
 };
 

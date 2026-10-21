@@ -1,6 +1,7 @@
 /* ==========================================================================
    20-chrome.css — window chrome: toolbar, the "since last update" display,
-   the two-column workspace and the status bar.
+   the three-column workspace, the pull-open drawers and their handles, and
+   the "jump to now" pill.
    ========================================================================== */
 
 .app {
@@ -13,16 +14,16 @@
 
 .toolbar {
   position: relative;
-  z-index: 5;
+  z-index: 6;
   flex: none;
   display: flex;
   align-items: center;
   gap: 12px;
   height: var(--toolbar-h);
-  padding: 0 16px;
-  background: linear-gradient(#fbfaf8, #e7e4de 55%, #d8d4cc);
-  border-bottom: 1px solid #958f84;
-  box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(255, 255, 255, .45), 0 2px 8px rgba(40, 34, 24, .14);
+  padding: 0 14px;
+  background: linear-gradient(var(--bar-hi), var(--bar-mid) 55%, var(--bar-lo));
+  border-bottom: 1px solid var(--bar-edge);
+  box-shadow: inset 0 1px 0 var(--shine), 0 2px 8px var(--shadow);
 }
 
 .toolbar-spacer { flex: 1; }
@@ -30,105 +31,70 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
 }
 
-.brand-mark svg { display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .25)); }
+.brand-mark svg { display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .3)); }
 
 .brand-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -.01em;
-  color: #34302a;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
+  color: var(--ink);
+  text-shadow: 0 1px 0 var(--emboss);
   white-space: nowrap;
 }
 
-.toolbar-tools {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.toolbar-tools { display: flex; align-items: center; gap: 8px; }
 
-/* Glossy capsule buttons, lit from above. */
+/* Round glossy toolbar buttons, icon only. */
 .tbtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 11px;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: #2e2a25;
-  text-shadow: 0 1px 0 #fff;
-  background: linear-gradient(#ffffff, #f2f0ec 50%, #e2dfd8 51%, #ebe8e2);
-  border: 1px solid #9f998e;
-  border-bottom-color: #8b857a;
-  border-radius: 7px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 1px 1px rgba(0, 0, 0, .08);
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  color: var(--btn-ink);
+  background: linear-gradient(var(--btn-1), var(--btn-2) 50%, var(--btn-3) 51%, var(--btn-4));
+  border: 1px solid var(--btn-edge);
+  border-bottom-color: var(--btn-edge-b);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--btn-shine), 0 1px 1px var(--shadow);
   cursor: pointer;
 }
 
-.tbtn:hover { background: linear-gradient(#ffffff, #f6f4f1 50%, #e8e5df 51%, #f1eee9); }
+.tbtn:hover { filter: var(--hover-lift); }
+.tbtn:active { filter: none; background: linear-gradient(var(--btn-press-1), var(--btn-press-2)); box-shadow: inset 0 1px 3px var(--shadow-deep); }
+.tbtn:disabled { opacity: .45; cursor: default; filter: none; }
 
-.tbtn:active, .tbtn.is-open {
-  background: linear-gradient(#d2cec5, #e0ddd6);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .22);
-}
-
-.tbtn:disabled {
-  color: #a8a297;
-  cursor: default;
-  background: linear-gradient(#fbfaf8, #eeebe6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95);
-}
-
-.tbtn:disabled .icon { opacity: .55; }
-
-.tbtn-round {
-  width: 30px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 50%;
-  height: 30px;
-}
-
-.segmented { display: flex; }
-.segmented .tbtn { border-radius: 0; }
-.segmented .tbtn + .tbtn { border-left-color: #b3ada2; }
-.segmented .tbtn:first-child { border-radius: 7px 0 0 7px; }
-.segmented .tbtn:last-child { border-radius: 0 7px 7px 0; }
-
-/* The "since last update" display sits in the middle of the toolbar like
-   the status window of a desktop media player: a recessed, backlit panel. */
-.idle-slot { flex: none; }
-
+/* The "since last update" display: a recessed, backlit panel in the middle
+   of the toolbar, like the status window of a desktop media player. */
 .idle-chip {
   display: flex;
   align-items: center;
-  gap: 11px;
-  width: 268px;
-  height: 38px;
-  padding: 0 14px 0 12px;
+  gap: 10px;
+  width: 250px;
+  height: 34px;
+  padding: 0 13px 0 11px;
   text-align: left;
   cursor: pointer;
-  color: var(--ink);
+  color: var(--lcd-ink);
   background:
-    linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 50%),
-    linear-gradient(#e9eadf, #f7f7f0);
-  border: 1px solid #8a8579;
+    linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 50%),
+    linear-gradient(var(--lcd-hi), var(--lcd-lo));
+  border: 1px solid var(--lcd-edge);
   border-radius: 8px;
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(255, 255, 255, .35), 0 1px 0 rgba(255, 255, 255, .8);
+  box-shadow: inset 0 1px 4px var(--shadow-deep), 0 1px 0 var(--sep-hi);
 }
 
-.idle-chip:hover { border-color: #767165; }
-.idle-chip:active { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .3), 0 1px 0 rgba(255, 255, 255, .8); }
+.idle-chip:active { box-shadow: inset 0 2px 6px var(--shadow-deep), 0 1px 0 var(--sep-hi); }
 
 .idle-lamp {
   flex: none;
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #d4f8db, #41b45f 55%, #287f40);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 5px rgba(65, 180, 95, .55);
@@ -155,32 +121,24 @@
 }
 
 .idle-label {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .07em;
-  color: #6c6a5f;
+  letter-spacing: .08em;
+  color: var(--lcd-dim);
   white-space: nowrap;
 }
 
 .idle-value {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #2a2924;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
   white-space: nowrap;
 }
 
-.idle-chip[data-level="warn"] .idle-value { color: var(--amber-lo); }
+.idle-chip[data-level="warn"] .idle-value { color: var(--amber-ink); }
 .idle-chip[data-level="alert"] .idle-value { color: var(--red); }
-
-.idle-chip.is-pulsing { animation: check-in .6s ease-out; }
-
-@keyframes check-in {
-  0% { box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), 0 0 0 0 rgba(65, 180, 95, .55); }
-  100% { box-shadow: inset 0 1px 4px rgba(0, 0, 0, .22), 0 0 0 10px rgba(65, 180, 95, 0); }
-}
+.idle-chip.is-pulsing { animation: ring .6s ease-out; --ring-colour: rgba(65, 180, 95, .55); }
 
 /* -------------------------------------------------------------- workspace */
 
@@ -188,56 +146,124 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--side-w);
-  gap: 18px;
-  padding: 18px 18px 0;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  transition: grid-template-columns .24s ease;
 }
 
-.col-main {
+.workspace.left-open { grid-template-columns: var(--drawer-w) minmax(0, 1fr) 0; }
+.workspace.right-open { grid-template-columns: 0 minmax(0, 1fr) var(--drawer-w); }
+.workspace.left-open.right-open { grid-template-columns: var(--drawer-w) minmax(0, 1fr) var(--drawer-w); }
+
+.stage {
+  position: relative;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+}
+
+/* -------------------------------------------------------------- drawers */
+
+/* A drawer is a raised slab; the inner box keeps its full width while the
+   column opens, so the contents slide in rather than reflow. */
+.drawer {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: linear-gradient(var(--surface-hi), var(--surface-lo));
+}
+
+.drawer-left { border-right: 1px solid var(--surface-edge); box-shadow: inset -1px 0 0 var(--shine), 4px 0 12px var(--shadow); z-index: 2; }
+.drawer-right { border-left: 1px solid var(--surface-edge); box-shadow: inset 1px 0 0 var(--shine), -4px 0 12px var(--shadow); z-index: 2; }
+
+.workspace:not(.left-open) .drawer-left,
+.workspace:not(.right-open) .drawer-right { border: 0; box-shadow: none; }
+
+.drawer-inner {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--drawer-w);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.drawer-left .drawer-inner { right: 0; }
+.drawer-right .drawer-inner { left: 0; }
+
+/* Handles: a tab sticking out of each edge of the stage, with a knurled
+   grip, that you pull to open the drawer behind it. */
+.drawer-handle {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  /* Room for the panels' shadows inside the scrolling box. */
-  margin: -4px -8px 0 -6px;
-  padding: 4px 8px 22px 6px;
-}
-
-.col-side {
-  min-height: 0;
-  margin-bottom: 18px;
-}
-
-@media (max-width: 1220px) {
-  :root { --side-w: 340px; }
-}
-
-/* ------------------------------------------------------------- status bar */
-
-.statusbar {
-  flex: none;
-  display: flex;
   align-items: center;
-  gap: 10px;
-  height: var(--statusbar-h);
-  padding: 0 16px;
-  font-size: var(--fs-xs);
+  gap: 8px;
+  width: 22px;
+  padding: 12px 0;
   color: var(--ink-mid);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
-  background: linear-gradient(#e4e1db, #d0ccc4);
-  border-top: 1px solid #a39d92;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65);
+  background: linear-gradient(90deg, var(--btn-4), var(--btn-1) 45%, var(--btn-3));
+  border: 1px solid var(--btn-edge);
+  box-shadow: 0 1px 4px var(--shadow);
+  transform: translateY(-50%);
+  cursor: pointer;
 }
 
-.status-item { white-space: nowrap; }
-.status-item.is-error { color: var(--red); font-weight: 700; white-space: normal; }
-.status-spacer { flex: 1; }
-.status-version { color: var(--ink-dim); }
+.drawer-handle:hover { filter: var(--hover-lift); color: var(--ink); }
 
-.status-sep {
-  width: 1px;
-  height: 12px;
-  background: #a9a397;
-  box-shadow: 1px 0 0 rgba(255, 255, 255, .7);
+.handle-left { left: 0; border-left: 0; border-radius: 0 8px 8px 0; }
+.handle-right { right: 0; border-right: 0; border-radius: 8px 0 0 8px; }
+
+.handle-grip {
+  width: 8px;
+  height: 22px;
+  background-image: radial-gradient(circle, var(--ink-faint) .9px, transparent 1.3px);
+  background-size: 4px 4px;
 }
+
+.handle-label {
+  writing-mode: vertical-rl;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 var(--emboss);
+}
+
+.handle-left .handle-label { transform: rotate(180deg); }
+
+.handle-chevron { transition: transform .2s; }
+.handle-left .handle-chevron { transform: rotate(-90deg); }
+.handle-right .handle-chevron { transform: rotate(90deg); }
+.left-open .handle-left .handle-chevron { transform: rotate(90deg); }
+.right-open .handle-right .handle-chevron { transform: rotate(-90deg); }
+
+/* ---------------------------------------------------------- jump to now */
+
+.jump-now {
+  position: absolute;
+  left: 50%;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 16px 0 12px;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .3);
+  background: linear-gradient(#7db6f3, #4d8fe2 50%, #2d6cc4 51%, #3f81d6);
+  border: 1px solid #24599f;
+  border-radius: 17px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 18px var(--shadow-deep);
+  transform: translateX(-50%);
+  cursor: pointer;
+  animation: rise-in .18s ease-out;
+}
+
+.jump-now[hidden] { display: none; }
+.jump-now[data-dir="down"] { bottom: 22px; }
+.jump-now[data-dir="up"] { top: 18px; }
+.jump-now[data-dir="up"] .icon { transform: rotate(180deg); }
+.jump-now:hover { filter: brightness(1.06); }

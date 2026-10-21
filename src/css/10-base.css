@@ -1,5 +1,5 @@
 /* ==========================================================================
-   10-base.css — reset, the desk texture, shared typography.
+   10-base.css — reset, the desk, shared typography, keyframes.
    ========================================================================== */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -8,7 +8,7 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  min-width: 1024px;
+  min-width: 900px;
   overflow: hidden;
   font: var(--fs-md)/1.45 var(--font);
   color: var(--ink);
@@ -17,7 +17,6 @@ body {
      not enough to notice. */
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0)),
     linear-gradient(var(--desk-top), var(--desk-bot));
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -26,7 +25,7 @@ body {
 
 button, input, textarea, select { font: inherit; color: inherit; }
 
-:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 b, strong { font-weight: 700; }
 
@@ -34,7 +33,7 @@ code {
   font: .92em var(--mono);
   padding: 1px 4px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, .06);
+  background: var(--accent-soft);
 }
 
 kbd {
@@ -43,20 +42,44 @@ kbd {
   padding: 0 5px;
   font: 600 10.5px/16px var(--font);
   text-align: center;
-  color: #4a453d;
-  background: linear-gradient(#ffffff, #ebe8e2);
-  border: 1px solid #b3ada1;
+  color: var(--btn-ink);
+  background: linear-gradient(var(--btn-1), var(--btn-4));
+  border: 1px solid var(--btn-edge);
   border-radius: 4px;
-  box-shadow: 0 1px 0 #a39d91;
+  box-shadow: 0 1px 0 var(--btn-edge-b);
 }
 
 .dim { color: var(--ink-dim); }
 
 .icon { flex: none; display: block; }
 
+/* Engraved small-caps label, used for section headings everywhere. */
+.label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-shadow: 0 1px 0 var(--emboss);
+}
+
+/* An etched rule: a dark line over a light one. */
+.etched {
+  height: 2px;
+  border: 0;
+  border-top: 1px solid var(--sep);
+  border-bottom: 1px solid var(--sep-hi);
+  margin: 0;
+}
+
 @keyframes breathe {
   0%, 100% { opacity: 1; }
-  50% { opacity: .55; }
+  50% { opacity: .5; }
+}
+
+@keyframes ring {
+  0% { box-shadow: 0 0 0 0 var(--ring-colour, rgba(58, 123, 213, .5)); }
+  100% { box-shadow: 0 0 0 9px rgba(0, 0, 0, 0); }
 }
 
 @keyframes fade-in {
@@ -72,5 +95,5 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

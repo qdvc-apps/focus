@@ -5,6 +5,7 @@ set -e
 cd "$(dirname "$0")/.."
 node tools/test-yaml.mjs
 node tools/test-core.mjs
+node tools/test-timeline.mjs
 node tools/test-views.mjs
 node tools/test-example.mjs
 sh build.sh

@@ -11,85 +11,63 @@
   padding: 0 13px;
   font-size: var(--fs-md);
   font-weight: 600;
-  color: #2e2a25;
-  text-shadow: 0 1px 0 #fff;
+  color: var(--btn-ink);
+  text-shadow: 0 1px 0 var(--emboss);
   white-space: nowrap;
-  background: linear-gradient(#ffffff, #f2f0ec 50%, #e3e0d9 51%, #ece9e3);
-  border: 1px solid #a19b90;
-  border-bottom-color: #8c867b;
+  background: linear-gradient(var(--btn-1), var(--btn-2) 50%, var(--btn-3) 51%, var(--btn-4));
+  border: 1px solid var(--btn-edge);
+  border-bottom-color: var(--btn-edge-b);
   border-radius: var(--radius);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 1px 2px rgba(0, 0, 0, .1);
+  box-shadow: inset 0 1px 0 var(--btn-shine), 0 1px 2px var(--shadow);
   cursor: pointer;
 }
 
-.btn:hover { background: linear-gradient(#ffffff, #f7f5f2 50%, #e9e6e0 51%, #f2efea); }
+.btn:hover { filter: var(--hover-lift); }
 
 .btn:active {
-  background: linear-gradient(#d4d0c8, #e2dfd8);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .22);
+  filter: none;
+  background: linear-gradient(var(--btn-press-1), var(--btn-press-2));
+  box-shadow: inset 0 1px 3px var(--shadow-deep);
 }
 
 .btn:disabled {
-  color: #aaa499;
-  text-shadow: none;
+  opacity: .5;
+  filter: none;
   cursor: default;
-  background: linear-gradient(#f8f7f4, #eeebe6);
   box-shadow: none;
-  border-color: #c3bdb2;
 }
 
-.btn:disabled .icon { opacity: .5; }
-
-.btn-lg {
-  height: 40px;
-  padding: 0 18px;
-  font-size: 14px;
-  border-radius: 8px;
-}
-
-.btn-sm {
-  height: 26px;
-  padding: 0 10px;
-  font-size: var(--fs-sm);
-  gap: 5px;
-}
-
-.btn-icon { width: 40px; padding: 0; }
+.btn-lg { height: 38px; padding: 0 17px; font-size: 14px; border-radius: 8px; }
+.btn-sm { height: 26px; padding: 0 10px; font-size: var(--fs-sm); gap: 5px; }
+.btn-icon { width: 38px; padding: 0; }
+.btn-block { width: 100%; justify-content: flex-start; }
 
 /* Coloured buttons share one recipe: a two-tone gloss and an engraved
-   label. Only the hues change. */
+   label. Only the hues change; they read the same in both themes. */
 .btn-primary, .btn-go, .btn-danger {
   color: #fff;
   text-shadow: 0 -1px 0 rgba(0, 0, 0, .3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 1px 2px rgba(0, 0, 0, .2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 1px 2px var(--shadow);
 }
 
 .btn-primary {
-  background: linear-gradient(var(--blue-hi), #4d8fe2 50%, var(--blue-lo) 51%, #3f81d6);
-  border-color: var(--blue-edge);
+  background: linear-gradient(#7db6f3, #4d8fe2 50%, #2d6cc4 51%, #3f81d6);
+  border-color: #24599f;
 }
-.btn-primary:hover { background: linear-gradient(#8dc0f6, #5b99e6 50%, #3676cc 51%, #4a8ade); }
-.btn-primary:active { background: linear-gradient(#2a65b8, #3a7bd5); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
 
 .btn-go {
-  background: linear-gradient(var(--go-hi), #55b26e 50%, var(--go-lo) 51%, #42a05c);
-  border-color: var(--go-edge);
+  background: linear-gradient(#82d396, #55b26e 50%, #379250 51%, #42a05c);
+  border-color: #29703d;
 }
-.btn-go:hover { background: linear-gradient(#93dba5, #61bb79 50%, #3e9a57 51%, #4aa964); }
-.btn-go:active { background: linear-gradient(#2f8146, #46a560); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
 
 .btn-danger {
   background: linear-gradient(#ec8a7f, #d55849 50%, #bd3d2f 51%, #c84a3c);
-  border-color: var(--red-edge);
+  border-color: #85251c;
 }
-.btn-danger:active { background: linear-gradient(#a8352a, #c84a3c); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
 
-.btn-primary:disabled, .btn-go:disabled, .btn-danger:disabled {
-  color: rgba(255, 255, 255, .85);
-  text-shadow: none;
-  filter: saturate(.25) brightness(1.15);
-  box-shadow: none;
-}
+.btn-primary:active { background: linear-gradient(#2a65b8, #3a7bd5); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+.btn-go:active { background: linear-gradient(#2f8146, #46a560); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+.btn-danger:active { background: linear-gradient(#a8352a, #c84a3c); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
 
 /* Small borderless tool that gains a bevel on hover. */
 .tool {
@@ -100,7 +78,7 @@
   width: 26px;
   height: 24px;
   padding: 0;
-  color: #625d54;
+  color: var(--ink-mid);
   background: none;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -108,22 +86,21 @@
 }
 
 .tool:hover, .tool.is-open {
-  color: #2b2824;
-  background: linear-gradient(#ffffff, #e9e6e0);
-  border-color: #b5afa4;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .08);
+  color: var(--ink);
+  background: linear-gradient(var(--btn-1), var(--btn-4));
+  border-color: var(--btn-edge);
+  box-shadow: inset 0 1px 0 var(--btn-shine), 0 1px 1px var(--shadow);
 }
 
 .tool:active {
-  background: linear-gradient(#d9d5cd, #e8e5df);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .18);
+  background: linear-gradient(var(--btn-press-1), var(--btn-press-2));
+  box-shadow: inset 0 1px 2px var(--shadow-deep);
 }
 
 .link-btn {
-  align-self: flex-start;
   padding: 0;
   font-size: var(--fs-md);
-  color: #2c66b8;
+  color: var(--accent-ink);
   background: none;
   border: 0;
   cursor: pointer;
@@ -131,36 +108,31 @@
 
 .link-btn:hover { text-decoration: underline; }
 
-.push-left { margin-right: auto; }
-.push-right { margin-left: auto; }
-
 /* Text fields are sunk into the surface. */
 .field {
   height: 30px;
   padding: 0 9px;
   font-size: var(--fs-md);
   color: var(--ink);
-  background: #fff;
-  border: 1px solid #aca69a;
-  border-top-color: #958f83;
+  background: var(--field-bg);
+  border: 1px solid var(--field-edge);
+  border-top-color: var(--field-edge-t);
   border-radius: 5px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .13), 0 1px 0 rgba(255, 255, 255, .85);
+  box-shadow: inset 0 1px 2px var(--shadow), 0 1px 0 var(--sep-hi);
 }
 
-.field::placeholder { color: #a39d92; }
+.field::placeholder { color: var(--ink-faint); }
 
 .field:focus {
   outline: none;
-  border-color: #5a8fd6;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1), var(--ring);
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 2px var(--shadow), 0 0 0 3px var(--accent-soft);
 }
-
-.field-lg { width: 100%; height: 36px; font-size: 15px; }
 
 .field-area {
   width: 100%;
   height: auto;
-  padding: 8px 10px;
+  padding: 7px 9px;
   line-height: 1.45;
   resize: vertical;
 }
@@ -175,23 +147,13 @@
   resize: vertical;
 }
 
-.form-label {
-  display: block;
-  margin: 0 0 5px;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--ink-mid);
-}
-
-.field-error {
-  min-height: 16px;
-  margin: 3px 0 8px;
-  font-size: var(--fs-sm);
-  color: var(--red);
-}
-
-.form-foot-note {
-  margin-top: 10px;
-  font-size: 11.5px;
-  color: var(--ink-dim);
+/* A segmented control: a row of buttons sharing one bevelled frame. */
+.segmented { display: inline-flex; }
+.segmented .btn { border-radius: 0; margin-left: -1px; }
+.segmented .btn:first-child { border-radius: var(--radius) 0 0 var(--radius); margin-left: 0; }
+.segmented .btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.segmented .btn[aria-pressed="true"] {
+  background: linear-gradient(var(--btn-press-1), var(--btn-press-2));
+  box-shadow: inset 0 1px 3px var(--shadow-deep);
+  filter: none;
 }

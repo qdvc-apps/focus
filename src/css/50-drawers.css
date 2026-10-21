@@ -1,0 +1,198 @@
+/* ==========================================================================
+   50-drawers.css — what goes inside the drawers: the overview on the left
+   and the task inspector on the right.
+   ========================================================================== */
+
+.dw { padding: 0 0 24px; }
+
+.dw-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: linear-gradient(var(--bar-hi), var(--bar-mid));
+  border-bottom: 1px solid var(--sep);
+  box-shadow: inset 0 1px 0 var(--shine), 0 1px 0 var(--sep-hi);
+}
+
+.dw-head .label { color: var(--ink-mid); }
+.dw-head .chip { margin-left: auto; }
+
+.dw-section { padding: 14px 16px 4px; }
+.dw-section > .label { margin-bottom: 8px; }
+.dw-section + .dw-section { border-top: 1px solid var(--sep); box-shadow: inset 0 1px 0 var(--sep-hi); }
+
+.dw-empty {
+  padding: 18px 16px;
+  color: var(--ink-dim);
+}
+
+/* --------------------------------------------------------------- overview */
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tile {
+  padding: 8px 10px 9px;
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px var(--shadow), 0 1px 0 var(--sep-hi);
+}
+
+.tile-value {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 var(--emboss);
+}
+
+.tile-label { font-size: var(--fs-xs); color: var(--ink-dim); }
+
+/* The day at a glance: focus on the top track, background underneath. */
+.ribbon {
+  position: relative;
+  height: 30px;
+  margin-top: 12px;
+  background: linear-gradient(var(--well-hi), var(--well-lo));
+  border-radius: 6px;
+  box-shadow: inset 0 1px 3px var(--shadow), 0 1px 0 var(--sep-hi);
+  overflow: hidden;
+}
+
+.rb-seg {
+  position: absolute;
+  min-width: 2px;
+  border-radius: 2px;
+  background:
+    linear-gradient(rgba(255, 255, 255, .45), rgba(255, 255, 255, 0) 60%),
+    var(--lc);
+}
+
+.rb-focus { top: 4px; height: 11px; }
+.rb-bg { top: 18px; height: 7px; opacity: .85; }
+
+.rb-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--sep);
+}
+
+.rb-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.ov-row .ov-key { flex: none; width: 76px; font-size: var(--fs-sm); color: var(--ink-dim); }
+.ov-row .ov-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
+/* The day list: a classic source list, with a bevelled selection. */
+.day-list { margin: 0 -8px; padding: 0; list-style: none; }
+
+.day-link {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.day-link:hover {
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, .25);
+  background: linear-gradient(#64a1ea, #3a7bd5);
+}
+
+.day-link:hover .day-sub { color: rgba(255, 255, 255, .85); }
+.day-name { flex: 1; font-weight: 600; }
+.day-sub { font-size: var(--fs-xs); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+/* -------------------------------------------------------------- inspector */
+
+.ins-body { padding: 14px 16px 4px; }
+
+.ins-title {
+  width: 100%;
+  height: 34px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ins-body .field-area { margin-top: 8px; min-height: 92px; }
+
+.ins-hint { margin-top: 4px; font-size: var(--fs-xs); color: var(--ink-faint); }
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.facts dt { color: var(--ink-dim); }
+.facts dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.stretch-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.stretch-list li {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--sep);
+  box-shadow: 0 1px 0 var(--sep-hi);
+}
+
+.stretch-list li:last-child { border-bottom: 0; box-shadow: none; }
+
+.sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(0, 0, 0, .2);
+}
+
+.sw-bg {
+  border-radius: 3px;
+  background: repeating-linear-gradient(-45deg, var(--lc) 0 3px, color-mix(in srgb, var(--lc) 50%, #fff) 3px 6px);
+}
+
+.stretch-when { color: var(--ink-mid); }
+.stretch-len { font-weight: 700; }
+
+.ins-actions { display: flex; flex-direction: column; gap: 6px; }
+.ins-actions .btn { justify-content: flex-start; }

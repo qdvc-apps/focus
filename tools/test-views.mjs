@@ -69,15 +69,15 @@ function balanced(html) {
 }
 
 function views(s, now) {
+  const tl = QDF.timeline.build(s, now);
+  const firstId = (s.current || s.queue[0] || s.done[0] || s.background[0] || {}).id;
   return {
-    now: V.now(s, now),
-    queue: V.queue(s, now),
-    background: V.background(s, now),
-    done: V.done(s, now, { doneCollapsed: false }),
-    doneCollapsed: V.done(s, now, { doneCollapsed: true }),
-    idle: V.idle(s, now),
-    status: V.status(s, now, { savedAt: now, error: null }),
-    statusError: V.status(s, now, { savedAt: null, error: 'Could not save <here>' })
+    timeline: V.timeline(tl, s, now, { selectedId: firstId }),
+    overview: V.overview(s, now),
+    inspectorEmpty: V.inspector(s, now, null),
+    ...Object.fromEntries([s.current, ...s.queue, ...s.background, ...s.done].filter(Boolean)
+      .map((item, k) => ['inspector' + k, V.inspector(s, now, item.id)])),
+    idle: V.idle(s, now)
   };
 }
 
@@ -105,13 +105,30 @@ for (const [name, s] of Object.entries(states())) {
   }
 }
 
-t.check('the now view shows the clock from first start', () => {
+t.check('the present card shows the clock from first start', () => {
   const s = M.newState(T0);
   M.add(s, 'a', '', null, T0);
   M.start(s, s.queue[0].id, T0);
-  const html = V.now(s, T0 + 3723000);
+  const now = T0 + 3723000;
+  const html = V.timeline(QDF.timeline.build(s, now), s, now, {});
   t.ok(html.includes('>1:02:03<'), 'clock text');
   t.ok(html.includes('data-tick="clock"'), 'clock ticks');
+  t.ok(html.includes('id="tl-present"') && html.includes('id="tl-now"'), 'anchors for jump to now');
+});
+
+t.check('the timeline marks the selected card and only that one', () => {
+  const s = states().busy;
+  const now = T0 + 5 * MIN;
+  const id = s.done[0].id;
+  const html = V.timeline(QDF.timeline.build(s, now), s, now, { selectedId: id });
+  const selected = html.match(/class="[^"]*is-selected[^"]*"[^>]*data-select="([^"]+)"/g) || [];
+  t.ok(selected.length >= 1 && selected.every(m => m.includes(id)), selected.join('\n'));
+});
+
+t.check('the graph column is as wide as the lanes in use', () => {
+  const G = QDF.GEOM;
+  t.eq(V.graphWidth({ lanes: 1 }), G.laneX0 * 2);
+  t.eq(V.graphWidth({ lanes: 3 }), G.laneX0 * 2 + 2 * G.laneW);
 });
 
 t.check('the idle indicator changes level with time', () => {
@@ -150,6 +167,8 @@ const shell = src('10-shell.html');
 t.check('every data-act has a handler, and every handler is used', () => {
   const used = new Set();
   for (const m of (js + shell).matchAll(/data-act="([\w-]+)"/g)) used.add(m[1]);
+  for (const m of js.matchAll(/\bact\('([\w-]+)'/g)) used.add(m[1]);
+  for (const m of js.matchAll(/A\['([\w-]+)'\]/g)) used.add(m[1]);
   for (const m of js.matchAll(/\btool\('\w+', '([\w-]+)'/g)) used.add(m[1]);
   const handlers = new Set(Object.keys(QDF.app.actions));
   const missing = [...used].filter(a => !handlers.has(a));
@@ -170,10 +189,13 @@ t.check('every icon name exists', () => {
 
 t.check('every element the controller looks up exists in the shell', () => {
   const app = src('js/90-app.js') + src('js/50-ui.js') + src('js/68-transfer.js');
-  const dynamic = new Set(['idle-chip', 'quick-start-input', 'btn-done-next']);
+  const dynamic = new Set(['idle-chip', 'quick-start-input', 'btn-done-next', 'add-input', 'ins-title',
+    'tl-present', 'tl-now', 'tl-day-']);
   const ids = new Set();
   for (const m of app.matchAll(/(?:\$|getElementById)\('([\w-]+)'\)/g)) ids.add(m[1]);
-  const missing = [...ids].filter(id => !dynamic.has(id) && !shell.includes(`id="${id}"`));
+  const views = js;
+  const missing = [...ids].filter(id => !shell.includes(`id="${id}"`) &&
+    !(dynamic.has(id) && views.includes(id)));
   t.eq(missing, []);
 });
 

@@ -140,6 +140,43 @@ QDF.store = (function () {
     return true;
   }
 
+  /* Every localStorage key belonging to the app, found by prefix. */
+  function ownKeys() {
+    var ls = storage(), keys = [];
+    if (!ls) return keys;
+    try {
+      for (var k = 0; k < ls.length; k++) {
+        var key = ls.key(k);
+        if (key && key.indexOf(QDF.APP.storagePrefix) === 0) keys.push(key);
+      }
+    } catch (e) { /* storage unavailable */ }
+    return keys;
+  }
+
+  function usage() {
+    var ls = storage(), bytes = 0;
+    ownKeys().forEach(function (key) {
+      try { bytes += (key.length + (ls.getItem(key) || '').length) * 2; } catch (e) { /* ignore */ }
+    });
+    return { keys: ownKeys().length, bytes: bytes };
+  }
+
+  /* "Reset app": removes everything the app keeps in this browser — the
+     state, the preferences, any copy of unreadable data — and starts over.
+     Nothing is saved until the next change, so storage stays empty. This
+     cannot be undone. */
+  function resetAll() {
+    var ls = storage();
+    ownKeys().forEach(function (key) {
+      try { ls.removeItem(key); } catch (e) { /* ignore */ }
+    });
+    state = QDF.model.newState(now());
+    history = [];
+    info = { savedAt: null, error: null, notice: null };
+    emit({ type: 'reset' });
+    return ownKeys().length === 0;
+  }
+
   function undoLabel() {
     return history.length ? history[history.length - 1].label : null;
   }
@@ -164,6 +201,7 @@ QDF.store = (function () {
   return {
     load: load, get: get, commit: commit, touch: touch, undo: undo, replace: replace,
     reloadFromStorage: reloadFromStorage, undoLabel: undoLabel, onChange: onChange,
+    resetAll: resetAll, usage: usage, ownKeys: ownKeys,
     info: function () { return info; }, takeNotice: takeNotice,
     now: function () { return now(); },
     configure: configure
